@@ -38,6 +38,7 @@ import {
   SlidersHorizontal,
   Pencil
 } from 'lucide-react';
+import VoterFilterTopBar from './VoterFilterTopBar';
 import VoterFilterSidebar, {
   VoterFilterState,
   initialFilterState,
@@ -1219,25 +1220,6 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  {/* Botón de Filtros para Móviles */}
-                  <button
-                    onClick={() => setMobileFiltersOpen(true)}
-                    className="lg:hidden px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
-                  >
-                    <Filter className="w-4 h-4 text-[#0080FF]" />
-                    <span>Filtros {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
-                  </button>
-
-                  {/* Botón para alternar Sidebar en PC */}
-                  <button
-                    onClick={() => setSidebarOpen((v) => !v)}
-                    className="hidden lg:flex px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl text-xs font-bold items-center gap-1.5 transition"
-                    title={sidebarOpen ? 'Ocultar panel lateral de filtros' : 'Mostrar panel lateral de filtros'}
-                  >
-                    <SlidersHorizontal className="w-4 h-4 text-[#0080FF]" />
-                    <span>{sidebarOpen ? 'Ocultar Filtros' : `Mostrar Filtros ${activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}`}</span>
-                  </button>
-
                   <button
                     onClick={() => setPdfModalOpen(true)}
                     className="px-3 py-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition border border-blue-200 shadow-xs"
@@ -1260,95 +1242,34 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
 
               {/* 
                 ========================================================================
-                DISTRIBUCIÓN 2 COLUMNAS ESTILO ARISTÓTELES (SIDEBAR DE FILTROS + TABLA CRUD)
+                BARRA SUPERIOR DE FILTROS INTEGRADA + TABLA A ANCHO COMPLETO 100%
+                Sin sidebar lateral para máxima visibilidad sin scroll horizontal
                 ========================================================================
               */}
-              <div className="flex flex-col lg:flex-row items-start gap-4">
-                {/* 1. SIDEBAR DE FILTROS EN PC (STICKY) */}
-                {sidebarOpen && (
-                  <aside className="hidden lg:block w-80 shrink-0 sticky top-20 animate-fade-in">
-                    <VoterFilterSidebar
-                      filters={filters}
-                      onChange={(newFilters) => {
-                        setFilters(newFilters);
-                        setCurrentPage(1);
-                      }}
-                      totalMatches={filteredVoters.length}
-                      totalVoters={liveVoters.length}
-                      availableProfessions={availableProfessions}
-                      systemUsers={systemUsers}
-                      territory={territory}
-                      onCollapsePc={() => setSidebarOpen(false)}
-                    />
-                  </aside>
-                )}
+              {/* 1. BARRA SUPERIOR DE FILTROS Y CONTROL */}
+              <VoterFilterTopBar
+                filters={filters}
+                onChange={(newFilters) => {
+                  setFilters(newFilters);
+                  setCurrentPage(1);
+                }}
+                totalMatches={filteredVoters.length}
+                totalVoters={liveVoters.length}
+                availableProfessions={availableProfessions}
+                systemUsers={systemUsers}
+                territory={territory}
+                viewMode={voterViewMode}
+                onViewModeChange={(m) => setVoterViewMode(m)}
+                safeCurrentPage={safeCurrentPage}
+                totalPages={totalPages}
+              />
 
-                {/* 2. MODAL DRAWER DE FILTROS EN MÓVILES */}
-                {mobileFiltersOpen && (
-                  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in lg:hidden">
-                    <div className="absolute inset-0" onClick={() => setMobileFiltersOpen(false)} />
-                    <div className="relative w-full max-w-lg z-10 animate-slide-up">
-                      <VoterFilterSidebar
-                        filters={filters}
-                        onChange={(newFilters) => {
-                          setFilters(newFilters);
-                          setCurrentPage(1);
-                        }}
-                        totalMatches={filteredVoters.length}
-                        totalVoters={liveVoters.length}
-                        availableProfessions={availableProfessions}
-                        systemUsers={systemUsers}
-                        territory={territory}
-                        onCloseMobile={() => setMobileFiltersOpen(false)}
-                        isMobileModal={true}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. CONTENIDO CENTRAL: TABLA CRUD Y PAGINACIÓN */}
-                <div className="flex-1 min-w-0 w-full space-y-3">
-                  {/* Barra de Controles: Switch de Vista y Conteo */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
-                        <button
-                          onClick={() => setVoterViewMode('tabla')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                            voterViewMode === 'tabla'
-                              ? 'bg-[#001E72] text-white shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <span>📊 Modo CRUD</span>
-                        </button>
-                        <button
-                          onClick={() => setVoterViewMode('tarjetas')}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                            voterViewMode === 'tarjetas'
-                              ? 'bg-[#001E72] text-white shadow-xs'
-                              : 'text-slate-600 hover:text-slate-900'
-                          }`}
-                        >
-                          <span>📱 Fichas</span>
-                        </button>
-                      </div>
-
-                      <span className="text-xs font-bold text-slate-700">
-                        {totalMatches} personas filtradas
-                      </span>
-                    </div>
-
-                    {/* Selector de Paginación Rápida */}
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>Página <strong>{safeCurrentPage}</strong> de <strong>{totalPages}</strong></span>
-                    </div>
-                  </div>
-
+              {/* 2. CONTENIDO PRINCIPAL A ANCHO COMPLETO 100% */}
+              <div className="w-full space-y-3">
                   {/* Pastillas de Filtros Activos (Clicables para Quitar) */}
                   {activeFilterPills.length > 0 && (
                     <div className="flex flex-wrap items-center gap-1.5 p-2 bg-blue-50/60 rounded-xl border border-blue-100 animate-fade-in">
-                      <span className="text-[11px] font-black uppercase text-[#001E72] mr-1">Filtros:</span>
+                      <span className="text-[11px] font-black uppercase text-[#001E72] mr-1">Filtros Activos:</span>
                       {activeFilterPills.map((pill) => (
                         <button
                           key={pill.key}
@@ -1384,18 +1305,18 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                         </span>
                       </div>
                       <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs min-w-[960px]">
+                        <table className="w-full text-left text-xs min-w-[860px]">
                           <thead className="bg-[#001E72] text-white uppercase font-black text-[11px] tracking-wider border-b border-slate-200 select-none">
                             <tr>
-                              <th className="py-3.5 px-3 w-10 text-center whitespace-nowrap">#</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap">Cédula</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap min-w-[190px]">Nombre Completo</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap min-w-[130px]">Teléfono</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap min-w-[130px]">Barrio / Vereda</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap min-w-[110px]">Nivel Estudio</th>
-                              <th className="py-3.5 px-3 whitespace-nowrap min-w-[150px]">Profesión u Oficio</th>
-                              <th className="py-3.5 px-3 text-center whitespace-nowrap min-w-[120px]">Estado</th>
-                              <th className="py-3.5 px-4 text-right whitespace-nowrap min-w-[160px]">Acciones</th>
+                              <th className="py-2.5 px-2.5 w-10 text-center whitespace-nowrap">#</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap">Cédula</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap min-w-[170px]">Nombre Completo</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap min-w-[120px]">Teléfono</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap min-w-[120px]">Barrio / Vereda</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap min-w-[100px]">Nivel Estudio</th>
+                              <th className="py-2.5 px-2.5 whitespace-nowrap min-w-[130px]">Profesión u Oficio</th>
+                              <th className="py-2.5 px-2 text-center whitespace-nowrap min-w-[100px]">Estado</th>
+                              <th className="py-2.5 px-3 text-right whitespace-nowrap min-w-[140px]">Acciones</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1429,13 +1350,13 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                         : 'hover:bg-slate-50/90'
                                     }`}
                                   >
-                                    <td className="py-3 px-3 text-center font-mono text-slate-400 font-bold whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 text-center font-mono text-slate-400 font-bold whitespace-nowrap">
                                       {startIndex + idx + 1}
                                     </td>
-                                    <td className="py-3 px-3 font-mono font-black text-slate-900 whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 font-mono font-black text-slate-900 whitespace-nowrap">
                                       {v.documento}
                                     </td>
-                                    <td className="py-3 px-3 font-bold text-slate-900 whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 font-bold text-slate-900 whitespace-nowrap">
                                       <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-md bg-[#001E72] text-white flex items-center justify-center font-black text-[9px] shrink-0">
                                           {initials}
@@ -1443,7 +1364,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                         <span className="truncate">{formattedName}</span>
                                       </div>
                                     </td>
-                                    <td className="py-3 px-3 text-slate-800 font-mono font-bold whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 text-slate-800 font-mono font-bold whitespace-nowrap">
                                       <a
                                         href={`tel:${v.telefono}`}
                                         onClick={(e) => e.stopPropagation()}
@@ -1452,13 +1373,13 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                         <Phone className="w-3.5 h-3.5 text-[#0080FF]" /> {v.telefono}
                                       </a>
                                     </td>
-                                    <td className="py-3 px-3 text-slate-700 font-semibold whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 text-slate-700 font-semibold whitespace-nowrap">
                                       {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
                                     </td>
-                                    <td className="py-3 px-3 capitalize text-slate-600 font-semibold whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 capitalize text-slate-600 font-semibold whitespace-nowrap">
                                       {v.estudio_realizado || 'Bachiller'}
                                     </td>
-                                    <td className="py-3 px-3 whitespace-nowrap">
+                                    <td className="py-2.5 px-2.5 whitespace-nowrap">
                                       {v.profesion ? (
                                         <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-[#0080FF] font-bold rounded-lg border border-blue-200 text-[11px]">
                                           <Briefcase className="w-3.5 h-3.5 shrink-0" /> {formatTitleCase(v.profesion)}
@@ -1467,20 +1388,20 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                         <span className="text-slate-400 italic text-[11px]">—</span>
                                       )}
                                     </td>
-                                    <td className="py-3 px-3 text-center whitespace-nowrap">
+                                    <td className="py-2.5 px-2 text-center whitespace-nowrap">
                                       {v._synced !== false ? (
-                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#166534] bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-black whitespace-nowrap shadow-2xs">
-                                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#166534] bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200 font-black whitespace-nowrap shadow-2xs">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                                           <span>En Nube</span>
                                         </span>
                                       ) : (
-                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#854d0e] bg-amber-50 px-3 py-1 rounded-full border border-amber-200 font-black whitespace-nowrap shadow-2xs">
-                                          <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#854d0e] bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200 font-black whitespace-nowrap shadow-2xs">
+                                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shrink-0"></span>
                                           <span>En Celular</span>
                                         </span>
                                       )}
                                     </td>
-                                    <td className="py-3 px-4 text-right whitespace-nowrap">
+                                    <td className="py-2.5 px-3 text-right whitespace-nowrap">
                                       <div className="inline-flex items-center justify-end gap-1.5">
                                         {currentUser.rol === 'gerente_general' && (
                                           <button
@@ -1488,7 +1409,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                               e.stopPropagation();
                                               setEditingVoter(v);
                                             }}
-                                            className="px-3 py-1.5 bg-[#0080FF] hover:bg-[#0070e0] text-white rounded-xl font-black text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition whitespace-nowrap"
+                                            className="px-2.5 py-1.5 bg-[#0080FF] hover:bg-[#0070e0] text-white rounded-lg font-black text-xs flex items-center gap-1 shadow-xs active:scale-95 transition whitespace-nowrap"
                                             title="Editar campos de este votante (Solo Admin)"
                                           >
                                             <Pencil className="w-3.5 h-3.5" />
@@ -1501,10 +1422,10 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                             setSelectedVoter(v);
                                             setInspectorOpen(true);
                                           }}
-                                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl font-bold text-xs flex items-center gap-1 transition whitespace-nowrap"
+                                          className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg font-bold text-xs flex items-center gap-1 transition whitespace-nowrap"
                                           title="Ver expediente lateral estilo Aristóteles"
                                         >
-                                          <span>Ficha</span>
+                                          <span>Ficha →</span>
                                         </button>
                                       </div>
                                     </td>
@@ -1584,24 +1505,15 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                   </a>
                                 </div>
 
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    onClick={() => setEditingVoter(v)}
-                                    className="flex-1 py-2 px-3 rounded-xl bg-[#0080FF] hover:bg-[#0070e0] text-white font-black text-xs flex items-center justify-center gap-1.5 transition active:scale-95 shadow-xs"
-                                  >
-                                    <Pencil className="w-3.5 h-3.5" />
-                                    <span>Editar Teléfono</span>
-                                  </button>
-                                  <button
-                                    onClick={() => {
-                                      setSelectedVoter(v);
-                                      setInspectorOpen(true);
-                                    }}
-                                    className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center transition"
-                                  >
-                                    <span>Ficha →</span>
-                                  </button>
-                                </div>
+                                <button
+                                  onClick={() => {
+                                    setSelectedVoter(v);
+                                    setInspectorOpen(true);
+                                  }}
+                                  className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-[#001E72] font-black text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95"
+                                >
+                                  <span>Ver Expediente Completo →</span>
+                                </button>
                               </div>
                             </div>
                           );
@@ -1664,7 +1576,6 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
           );
         })()}
