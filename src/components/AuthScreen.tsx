@@ -165,20 +165,40 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#EEF2F6] relative flex flex-col justify-between font-sans">
+    <div className="h-[100dvh] max-h-[100dvh] md:min-h-screen md:h-auto w-full bg-[#EEF2F6] relative flex flex-col justify-between font-sans overflow-hidden md:overflow-visible overscroll-none">
       
       {/* 1. Bandera Oficial de Turbo en el Extremo Superior (Colores Planos Institucionales) */}
-      <div className="w-full h-2 flex z-20">
+      <div className="w-full h-1.5 sm:h-2 flex z-30 shrink-0">
         <div className="h-full w-1/3 bg-[#F4BD21]" title="Amarillo Turbo" />
         <div className="h-full w-1/3 bg-[#3FBC24]" title="Verde Turbo" />
         <div className="h-full w-1/3 bg-[#0080FF]" title="Azul Somos" />
       </div>
 
       {/* 
-        2. Fondo Geométrico Asimétrico Inspirado en el Diseño de Pinterest
+        HEADER MÓVIL FIJO (FUERA DE LA TARJETA)
+        Saca el logo de Janier Lloreda arriba en un encabezado limpio y fijo.
+        Evita que la pantalla se alargue hacia abajo y elimine cualquier movimiento o scroll en celular.
+      */}
+      <div className="md:hidden bg-white border-b border-slate-200/80 px-4 py-2 flex items-center justify-between shadow-xs z-20 shrink-0">
+        <div className="flex items-center gap-2">
+          <img
+            src="/logo-janier.png"
+            alt="Janier Lloreda Valencia"
+            className="h-10 w-auto object-contain"
+          />
+        </div>
+        <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
+          <span className="w-2 h-2 rounded-full bg-[#3FBC24]" />
+          <span className="text-[10px] font-black uppercase tracking-wider text-[#001E72]">
+            TURBO 2026
+          </span>
+        </div>
+      </div>
+
+      {/* 
+        2. Fondo Geométrico Asimétrico Inspirado en el Diseño de Pinterest (Desktop)
         - Lado Izquierdo: Bloque Diagonal Sólido en Azul Oscuro Institucional #001E72 con ribete Verde #3FBC24
         - Lado Derecho: Lienzo Neutro Limpio #EEF2F6
-        (Crea el contraste perfecto: La mitad blanca del login flota sobre el fondo azul, y la mitad azul del login flota sobre el fondo claro)
       */}
       {/* Capa de Ribete Verde Turbo #3FBC24 */}
       <div 
@@ -195,26 +215,10 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
         }}
       />
 
-      {/* 3. Contenedor Central: Tarjeta Flotante Bicolor (Estilo Pinterest / Alta Autoridad) */}
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 lg:p-8 z-10 w-full">
+      {/* 3. Contenedor Central: Tarjeta Flotante Bicolor */}
+      <div className="flex-1 flex items-center justify-center p-3 sm:p-4 lg:p-8 z-10 w-full overflow-hidden">
         <div className="w-full max-w-sm sm:max-w-md md:max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl shadow-slate-900/20 border border-slate-200/80 overflow-hidden flex flex-col md:flex-row">
           
-          {/* ========================================================================= */}
-          {/* ENCABEZADO EXCLUSIVO PARA MÓVIL: ULTRA COMPACTO, VA DIRECTO AL FORMULARIO */}
-          {/* ========================================================================= */}
-          <div className="md:hidden bg-white px-4 py-3 text-center border-b border-slate-100 flex flex-col items-center justify-center space-y-1.5">
-            <img
-              src="/logo-janier.png"
-              alt="Janier Lloreda Valencia"
-              className="h-12 sm:h-14 w-auto max-w-[200px] object-contain mx-auto"
-            />
-            <div className="w-20 h-1 flex rounded-full overflow-hidden mx-auto shadow-xs">
-              <div className="w-1/3 h-full bg-[#F4BD21]" />
-              <div className="w-1/3 h-full bg-[#3FBC24]" />
-              <div className="w-1/3 h-full bg-[#0080FF]" />
-            </div>
-          </div>
-
           {/* ========================================================================= */}
           {/* LADO IZQUIERDO (DESKTOP): LIENZO BLANCO PURO CON EL LOGO DESTACADO       */}
           {/* ========================================================================= */}
@@ -274,9 +278,9 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
           </div>
 
           {/* ========================================================================= */}
-          {/* LADO DERECHO: AZUL OSCURO INSTITUCIONAL CON CAMPOS BLANCOS (ESTILO PINTEREST) */}
+          {/* LADO DERECHO: AZUL OSCURO INSTITUCIONAL CON CAMPOS BLANCOS                 */}
           {/* ========================================================================= */}
-          <div className="w-full md:w-1/2 bg-[#001E72] p-5 sm:p-8 lg:p-12 flex flex-col justify-between text-white relative">
+          <div className="w-full md:w-1/2 bg-[#001E72] p-4 sm:p-8 lg:p-12 flex flex-col justify-between text-white relative">
             
             {/* Cinta Tricolor Superior en el Panel Derecho */}
             <div className="absolute top-0 left-0 right-0 h-1.5 flex">
@@ -286,8 +290,8 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
             </div>
 
             {/* Cabecera del Formulario */}
-            <div className="pt-2 pb-4 sm:pb-6">
-              <div className="flex items-center gap-2 mb-1.5">
+            <div className="pt-1 sm:pt-2 pb-2.5 sm:pb-5">
+              <div className="flex items-center gap-2 mb-1">
                 <span className="w-2 h-2 rounded-full bg-[#3FBC24]" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-[#3FBC24]">
                   Acceso Autorizado
@@ -296,21 +300,21 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
               <h3 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight">
                 Ingreso al Sistema
               </h3>
-              <p className="text-xs text-slate-300 font-medium mt-0.5 sm:mt-1">
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
                 Escribe tu número de cédula y contraseña asignada.
               </p>
             </div>
 
             {/* Formulario con Campos Blancos Estilo Pinterest */}
-            <form onSubmit={handleLogin} className="space-y-3.5 sm:space-y-4 flex-1 flex flex-col justify-center">
+            <form onSubmit={handleLogin} className="space-y-3 sm:space-y-4 flex-1 flex flex-col justify-center">
               
               {/* Campo Cédula de Ciudadanía (Estilo Ergonómico Nequi) */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1">
                   Cédula de Ciudadanía
                 </label>
                 <div className="relative">
-                  <User className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
+                  <User className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type="text"
                     inputMode="numeric"
@@ -319,30 +323,30 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
                     value={documento}
                     onChange={(e) => setDocumento(e.target.value.replace(/\D/g, ''))}
                     placeholder="Número de cédula (Ej. 1001)"
-                    className="w-full pl-11 pr-4 py-3.5 sm:py-4 bg-white text-slate-900 rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
+                    className="w-full pl-11 pr-4 py-3 sm:py-3.5 bg-white text-slate-900 rounded-xl sm:rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
                   />
                 </div>
               </div>
 
               {/* Campo Contraseña (Estilo Ergonómico Nequi) */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1">
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
+                  <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-3" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Contraseña asignada"
-                    className="w-full pl-11 pr-11 py-3.5 sm:py-4 bg-white text-slate-900 rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
+                    className="w-full pl-11 pr-11 py-3 sm:py-3.5 bg-white text-slate-900 rounded-xl sm:rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition p-1"
+                    className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition p-1"
                     title={showPassword ? 'Ocultar' : 'Mostrar'}
                   >
                     {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
@@ -351,7 +355,7 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
               </div>
 
               {/* Recordarme y Enlace SOMOS */}
-              <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
+              <div className="flex items-center justify-between text-xs text-slate-300 pt-0.5">
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -368,19 +372,19 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
 
               {/* Mensaje de Error si aplica */}
               {errorMsg && (
-                <div className="p-3 bg-red-900/40 border border-red-500/60 text-red-200 text-xs font-semibold rounded-xl text-center">
+                <div className="p-2.5 bg-red-900/40 border border-red-500/60 text-red-200 text-xs font-semibold rounded-xl text-center">
                   {errorMsg}
                 </div>
               )}
 
               {/* 
                 Botón de Acción Ergonómico: Amarillo Turbo #F4BD21 con Texto Azul Oscuro #001E72
-                (Altura generosa 52px estilo Nequi con respuesta táctil)
+                (Altura generosa estilo Nequi con respuesta táctil)
               */}
               <button
                 type="submit"
                 disabled={loading || !documento.trim() || !password.trim()}
-                className="w-full py-4 px-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] shadow-xl shadow-black/25 active:scale-[0.98] disabled:opacity-50 transition mt-2"
+                className="w-full py-3.5 sm:py-4 px-4 rounded-xl sm:rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] shadow-xl shadow-black/25 active:scale-[0.98] disabled:opacity-50 transition mt-1 sm:mt-2"
               >
                 {loading ? (
                   <>
@@ -397,11 +401,11 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
             </form>
 
             {/* Asistencia para Líderes y Secretarías */}
-            <div className="pt-3 mt-3 border-t border-white/10 text-center">
+            <div className="pt-2 sm:pt-3 mt-2 sm:mt-3 border-t border-white/10 text-center">
               <p className="text-[10px] sm:text-[11px] text-slate-300 font-medium">
                 ¿Eres líder y necesitas tu clave de acceso?
               </p>
-              <span className="text-[11px] sm:text-xs font-bold text-[#00CFFF] block mt-0.5">
+              <span className="text-[10px] sm:text-xs font-bold text-[#00CFFF] block mt-0.5">
                 Solicítala a la Secretaría de tu Equipo Operativo
               </span>
             </div>
@@ -412,12 +416,12 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
       </div>
 
       {/* 4. Footer Institucional de Campaña */}
-      <footer className="w-full py-3 px-4 text-center text-xs text-slate-500 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto z-10">
-        <div className="flex items-center gap-2 text-[11px]">
+      <footer className="w-full py-2 px-3 text-center text-xs text-slate-500 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between max-w-7xl mx-auto z-10 shrink-0">
+        <div className="flex items-center gap-2 text-[10px] sm:text-[11px]">
           <ShieldCheck className="w-3.5 h-3.5 text-[#3FBC24]" />
           <span className="font-semibold text-slate-700">Plataforma Oficial de Campaña • Janier Lloreda Valencia</span>
         </div>
-        <div className="text-[11px] text-slate-500 mt-1 sm:mt-0 font-medium">
+        <div className="text-[10px] sm:text-[11px] text-slate-500 mt-0.5 sm:mt-0 font-medium">
           Distrito Especial Portuario de Turbo, Antioquia — SOMOS 2026
         </div>
       </footer>

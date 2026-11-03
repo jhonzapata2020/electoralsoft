@@ -618,55 +618,53 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
 
       {/* 
         ================================================================
-        PANTALLA 3: MI META DE CUMPLIMIENTO
+        BARRA DE NAVEGACIÓN INFERIOR FIJA (ESTILO ARISTOTLE / APP MÓVIL)
+        Para que el líder o secretaria navegue cómodamente con el pulgar
         ================================================================
       */}
-      {activeScreen === 'meta' && (
-        <main className="max-w-md mx-auto w-full p-4 space-y-4 flex-1">
-          <div className="bg-white rounded-3xl p-6 shadow-xl border border-slate-100 space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">
-                Progreso de Cumplimiento
-              </span>
-              <span className="px-3 py-1 rounded-full text-xs font-black bg-blue-50 text-[#0080FF] border border-blue-200">
-                {currentUser.rol.replace(/_/g, ' ')}
-              </span>
-            </div>
+      <nav className="fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-1.5 px-4 flex items-center justify-around z-30 shadow-lg select-none">
+        <button
+          onClick={() => setActiveScreen('registro')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 ${
+            activeScreen === 'registro'
+              ? 'text-[#0080FF] font-black'
+              : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <UserPlus className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Registrar</span>
+        </button>
 
-            <div className="flex items-baseline justify-between">
-              <div>
-                <span className="text-4xl font-black text-slate-900">{total}</span>
-                {meta > 0 && <span className="text-slate-400 text-sm ml-1.5 font-bold">/ {meta} personas meta</span>}
-              </div>
-              {meta > 0 && (
-                <span className="text-3xl font-black text-[#0080FF]">{percent}%</span>
-              )}
-            </div>
+        <button
+          onClick={() => setActiveScreen('lista')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 relative ${
+            activeScreen === 'lista'
+              ? 'text-[#0080FF] font-black'
+              : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <Users className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Mis Personas</span>
+          {total > 0 && (
+            <span className="absolute top-0 right-1 bg-[#F4BD21] text-[#001E72] text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+              {total}
+            </span>
+          )}
+        </button>
 
-            {meta > 0 && (
-              <div className="w-full h-3.5 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200">
-                <div
-                  className={`h-full rounded-full transition-all duration-500 ${
-                    total >= meta ? 'bg-[#3FBC24]' : percent >= 50 ? 'bg-[#F4BD21]' : 'bg-[#0080FF]'
-                  }`}
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            )}
+        <button
+          onClick={() => setActiveScreen('meta')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 ${
+            activeScreen === 'meta'
+              ? 'text-[#0080FF] font-black'
+              : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <Award className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Mi Meta ({percent}%)</span>
+        </button>
+      </nav>
 
-            {total >= meta && meta > 0 ? (
-              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#3FBC24] text-xs font-bold flex items-center gap-2">
-                <Award className="w-5 h-5 shrink-0" />
-                <span>¡Excelente trabajo! Has cumplido la cuota establecida para la campaña de Janier Lloreda.</span>
-              </div>
-            ) : meta > 0 ? (
-              <p className="text-xs text-slate-500 font-medium">
-                Te faltan <strong className="text-slate-800">{Math.max(0, meta - total)} personas</strong> para alcanzar la meta mínima asignada.
-              </p>
-            ) : null}
-          </div>
-        </main>
-      )}
     </div>
   );
 }

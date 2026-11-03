@@ -25,7 +25,8 @@ import {
   ShieldCheck,
   UserCheck,
   UserX,
-  Sliders
+  Sliders,
+  BarChart3
 } from 'lucide-react';
 import VoterRegistrationModal from './VoterRegistrationModal';
 
@@ -1199,6 +1200,52 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
         onClose={() => setVoterModalOpen(false)}
         onVoterAdded={onVoterAdded}
       />
+
+      {/* 
+        Barra de Navegación Inferior Móvil para la Sala de Mando (Estilo Aristotle)
+        Permite al administrador o Janier alternar entre Territorio, Mandos y Censo con el pulgar
+      */}
+      <nav className="sm:hidden fixed bottom-0 inset-x-0 bg-white/95 backdrop-blur-md border-t border-slate-200 py-1.5 px-3 flex items-center justify-around z-30 shadow-lg select-none">
+        <button
+          onClick={() => setActiveTab('resumen')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 ${
+            activeTab === 'resumen' ? 'text-[#0080FF] font-black' : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <BarChart3 className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Territorio</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('usuarios')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 relative ${
+            activeTab === 'usuarios' ? 'text-[#0080FF] font-black' : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <Users className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Mandos</span>
+          {systemUsers.length > 0 && (
+            <span className="absolute top-0 right-1 bg-[#F4BD21] text-[#001E72] text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+              {systemUsers.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('censo')}
+          className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition active:scale-95 relative ${
+            activeTab === 'censo' ? 'text-[#0080FF] font-black' : 'text-slate-500 hover:text-slate-800 font-semibold'
+          }`}
+        >
+          <UserCheck className="w-5 h-5 stroke-[2.5]" />
+          <span className="text-[10px]">Censo</span>
+          {allVoters.length > 0 && (
+            <span className="absolute top-0 right-1 bg-[#3FBC24] text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
+              {allVoters.length}
+            </span>
+          )}
+        </button>
+      </nav>
     </div>
   );
 }
