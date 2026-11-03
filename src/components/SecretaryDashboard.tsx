@@ -152,14 +152,14 @@ export default function SecretaryDashboard({ currentUser, onLogout, onVoterAdded
   const getWhatsAppLink = (tel: string, nombre: string, doc: string, pass: string) => {
     const cleanTel = tel.replace(/\D/g, '');
     const telWithCode = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
-    const text = `Hola ${nombre}, has sido asignado(a) como líder en el ${currentJunta?.nombre || `Equipo Operativo ${juntaId}`} para la Campaña de Janier Lloreda (SOMOS TURBO).
+    const text = `Hola ${nombre}, has sido asignado(a) como líder en el ${currentJunta?.nombre || `Equipo Operativo ${juntaId}`} para la Campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).
 
 Tus credenciales de acceso para registrar a tus votantes son:
 👤 Usuario (Cédula): ${doc}
 🔑 Contraseña: ${pass}
 
 Ingresa aquí:
-${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}`;
+${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsoft.vercel.app'}`;
 
     return `https://api.whatsapp.com/send?phone=${telWithCode}&text=${encodeURIComponent(text)}`;
   };

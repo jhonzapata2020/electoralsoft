@@ -190,7 +190,7 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
         <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
           <span className="w-2 h-2 rounded-full bg-[#3FBC24]" />
           <span className="text-[10px] font-black uppercase tracking-wider text-[#001E72]">
-            TURBO 2026
+            SOMOS NUEVAS ACCIONES
           </span>
         </div>
       </div>
@@ -366,7 +366,7 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
                   <span className="font-medium text-xs sm:text-sm">Recordarme</span>
                 </label>
                 <span className="text-xs font-bold text-[#F4BD21] tracking-wide">
-                  SOMOS Turbo
+                  SOMOS Nuevas Acciones
                 </span>
               </div>
 

@@ -65,8 +65,10 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
   const [searchTerm, setSearchTerm] = useState('');
 
   const territory = getCachedTerritory();
-  const availableBarrios = territory.barrios.filter((b) => b.junta_directiva_id === Number(juntaId));
-  const availableVeredas = territory.veredas.filter((v) => v.corregimiento_id === Number(corregimientoId));
+  const availableBarrios = territory.barrios.filter((b) => Number(b.junta_directiva_id) === Number(juntaId));
+  const displayBarrios = availableBarrios.length > 0 ? availableBarrios : territory.barrios;
+  const availableVeredas = territory.veredas.filter((v) => Number(v.corregimiento_id) === Number(corregimientoId));
+  const displayVeredas = availableVeredas.length > 0 ? availableVeredas : territory.veredas;
   const { isOnline, pendingCount, syncNow } = useNetworkStatus();
 
   // Inicializar Barrio / Vereda
@@ -405,7 +407,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                     onChange={(e) => setBarrioId(Number(e.target.value))}
                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF]"
                   >
-                    {availableBarrios.map((b) => (
+                    {displayBarrios.map((b) => (
                       <option key={b.id} value={b.id}>
                         {b.nombre}
                       </option>
@@ -433,7 +435,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                       onChange={(e) => setVeredaId(Number(e.target.value))}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3 text-slate-900 text-xs font-semibold"
                     >
-                      {availableVeredas.map((v) => (
+                      {displayVeredas.map((v) => (
                         <option key={v.id} value={v.id}>{v.nombre}</option>
                       ))}
                     </select>
@@ -596,7 +598,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                         </a>
                         <a
                           href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
-                            `Hola ${v.nombre_completo}, te saludamos del equipo de Janier Lloreda (SOMOS TURBO).`
+                            `Hola ${v.nombre_completo}, te saludamos del equipo de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"

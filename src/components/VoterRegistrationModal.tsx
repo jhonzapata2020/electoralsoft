@@ -35,8 +35,10 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   const territory = getCachedTerritory();
-  const availableBarrios = territory.barrios.filter((b) => (juntaId ? b.junta_directiva_id === Number(juntaId) : true));
-  const availableVeredas = territory.veredas.filter((v) => (corregimientoId ? v.corregimiento_id === Number(corregimientoId) : true));
+  const availableBarrios = territory.barrios.filter((b) => (juntaId ? Number(b.junta_directiva_id) === Number(juntaId) : true));
+  const displayBarrios = availableBarrios.length > 0 ? availableBarrios : territory.barrios;
+  const availableVeredas = territory.veredas.filter((v) => (corregimientoId ? Number(v.corregimiento_id) === Number(corregimientoId) : true));
+  const displayVeredas = availableVeredas.length > 0 ? availableVeredas : territory.veredas;
 
   useEffect(() => {
     if (isOpen) {
@@ -296,7 +298,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                   onChange={(e) => setBarrioId(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3.5 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF]"
                 >
-                  {availableBarrios.map((b) => (
+                  {displayBarrios.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.nombre}
                     </option>
@@ -333,7 +335,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                   onChange={(e) => setVeredaId(Number(e.target.value))}
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-3 py-3.5 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF]"
                 >
-                  {availableVeredas.map((v) => (
+                  {displayVeredas.map((v) => (
                     <option key={v.id} value={v.id}>
                       {v.nombre}
                     </option>

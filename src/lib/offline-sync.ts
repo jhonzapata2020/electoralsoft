@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
 import { Votante, UsuarioSistema, JuntaDirectiva, Barrio, Corregimiento, Vereda } from '../types';
+import {
+  OFFICIAL_JUNTAS,
+  OFFICIAL_BARRIOS,
+  OFFICIAL_CORREGIMIENTOS,
+  OFFICIAL_VEREDAS,
+} from './territory-data';
 
 const STORAGE_KEYS = {
   CURRENT_USER: 'psp_current_user',
@@ -100,11 +106,15 @@ const DEFAULT_JUNTAS: JuntaDirectiva[] = Array.from({ length: 11 }, (_, i) => ({
 
 export function getCachedTerritory() {
   const localJuntas = getStorage<JuntaDirectiva[]>(STORAGE_KEYS.JUNTAS, []);
+  const localBarrios = getStorage<Barrio[]>(STORAGE_KEYS.BARRIOS, []);
+  const localCorregimientos = getStorage<Corregimiento[]>(STORAGE_KEYS.CORREGIMIENTOS, []);
+  const localVeredas = getStorage<Vereda[]>(STORAGE_KEYS.VEREDAS, []);
+
   return {
-    juntas: localJuntas.length > 0 ? localJuntas : DEFAULT_JUNTAS,
-    barrios: getStorage<Barrio[]>(STORAGE_KEYS.BARRIOS, []),
-    corregimientos: getStorage<Corregimiento[]>(STORAGE_KEYS.CORREGIMIENTOS, []),
-    veredas: getStorage<Vereda[]>(STORAGE_KEYS.VEREDAS, []),
+    juntas: localJuntas.length > 0 ? localJuntas : OFFICIAL_JUNTAS,
+    barrios: localBarrios.length > 0 ? localBarrios : OFFICIAL_BARRIOS,
+    corregimientos: localCorregimientos.length > 0 ? localCorregimientos : OFFICIAL_CORREGIMIENTOS,
+    veredas: localVeredas.length > 0 ? localVeredas : OFFICIAL_VEREDAS,
   };
 }
 

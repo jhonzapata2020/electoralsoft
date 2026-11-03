@@ -65,6 +65,14 @@ export async function POST(req: Request) {
       );
     }
 
+    // BLINDAJE INSTITUCIONAL: Nadie puede auto-asignarse o crear Gerente General salvo la campaña de Janier
+    if (rol === 'gerente_general' && docClean !== '1001' && docClean !== '1078577718') {
+      return NextResponse.json(
+        { error: 'Acceso Denegado: El rol de Gerente General está reservado exclusivamente para Janier Lloreda Valencia.' },
+        { status: 403 }
+      );
+    }
+
     const payload = {
       documento: docClean,
       nombre_completo: nombreClean,
@@ -119,7 +127,7 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: 'ID y estado son requeridos.' }, { status: 400 });
     }
 
-    const endpoint = `${SUPABASE_URL}/rest/v1/usuarios_sistema?id=eq.${encodeURIComponent(id)}`;
+    const endpoint = `${SUPABASE_URL}/rest/v1/usuarios_sistema?id=eq.${encodeURIComponent(id)}&rol=neq.gerente_general`;
     const res = await fetch(endpoint, {
       method: 'PATCH',
       headers: {

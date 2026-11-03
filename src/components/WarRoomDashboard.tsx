@@ -71,7 +71,7 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   // Vista del Tablero de los 11 Equipos (Gráfico o Tarjetas)
   const [viewMode, setViewMode] = useState<'grafico' | 'tarjetas'>('grafico');
   // Filtro de la Gráfica Central de Barrios (Estilo Aristotle)
-  const [chartFilter, setChartFilter] = useState<'top_barrios' | 'reforzar' | 'equipos'>('top_barrios');
+  const [chartFilter, setChartFilter] = useState<'juntas' | 'equipos' | 'top_barrios' | 'reforzar'>('juntas');
   // Vista del Censo (Tabla o Tarjetas estilo Aristotle)
   const [voterViewMode, setVoterViewMode] = useState<'tabla' | 'tarjetas'>('tabla');
 
@@ -141,20 +141,28 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
 
   // Datos para la gráfica central según el filtro seleccionado
   const chartItems = chartFilter === 'top_barrios'
-    ? topBarrios.slice(0, 8)
+    ? topBarrios.slice(0, 10)
     : chartFilter === 'reforzar'
-    ? barriosPorReforzar.slice(0, 8)
-    : equiposStats.map((eq: any) => ({ nombre: eq.nombre, votos: eq.votos, id: eq.id }));
+    ? barriosPorReforzar.slice(0, 10)
+    : chartFilter === 'equipos'
+    ? barrioStats.slice(0, 20).map((b: any) => ({ nombre: b.nombre, votos: b.votos, id: b.id }))
+    : equiposStats.map((eq: any) => ({ nombre: eq.nombre.replace('Junta Directiva ', 'JD '), votos: eq.votos, id: eq.id }));
 
   const chartMaxVal = Math.max(
     ...chartItems.map((item: any) => item.votos || 0),
-    chartFilter === 'equipos' ? 1200 : 25
+    chartFilter === 'juntas' ? 1000 : 25
   );
 
   const handleCreateSystemUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNombre.trim() || !newDoc.trim() || !newTel.trim()) {
       alert('Completa los campos obligatorios');
+      return;
+    }
+
+    // BLINDAJE: Solo el Gerente General (Janier) puede crear otro Gerente General
+    if (newRol === 'gerente_general' && currentUser.rol !== 'gerente_general') {
+      alert('Permiso denegado: Solo el Gerente General puede asignar este rol de máxima autoridad.');
       return;
     }
 
@@ -168,7 +176,7 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
       correo: `pwd:${pass}`,
       rol: newRol,
       zona: 'urbano',
-      junta_directiva_id: newRol === 'secretaria' ? Number(newJuntaId) : null,
+      junta_directiva_id: ['secretaria', 'lider_junta_directiva', 'lider_equipo_operativo'].includes(newRol) ? Number(newJuntaId) : null,
       lider_inmediato_id: currentUser.id,
       meta_minima: newRol === 'secretaria' ? 500 : 1000,
       is_active: true,
@@ -236,14 +244,14 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   const getWhatsAppLink = (tel: string, nombre: string, doc: string, pass: string, rolName: string) => {
     const cleanTel = tel.replace(/\D/g, '');
     const telWithCode = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
-    const text = `Hola ${nombre}, te damos la bienvenida a la plataforma oficial de la Campaña de Janier Lloreda (SOMOS TURBO).
+    const text = `Hola ${nombre}, te damos la bienvenida a la plataforma oficial de la Campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).
 
 Tus credenciales de acceso para tu rol de ${rolName} son:
 👤 Usuario (Cédula): ${doc}
 🔑 Contraseña: ${pass}
 
 Ingresa aquí:
-${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000'}`;
+${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsoft.vercel.app'}`;
 
     return `https://api.whatsapp.com/send?phone=${telWithCode}&text=${encodeURIComponent(text)}`;
   };
@@ -539,25 +547,47 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
             <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
               
               {/* Header del Gráfico con Título y Filtros Compactos */}
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">
-                    {chartFilter === 'top_barrios'
+                    {chartFilter === 'juntas'
+                      ? 'Comparativa de las 20 Juntas Directivas'
+                      : chartFilter === 'equipos'
+                      ? 'Comparativa de los 40 Equipos Operativos (Barrios)'
+                      : chartFilter === 'top_barrios'
                       ? 'Barrios con Mayor Cantidad de Votantes'
-                      : chartFilter === 'reforzar'
-                      ? 'Barrios Críticos por Reforzar'
-                      : 'Comparativa de los 11 Equipos Operativos'}
+                      : 'Barrios Críticos por Reforzar'}
                   </h3>
                   <span className="text-[11px] text-slate-400">
                     Cifras consolidadas del censo en tiempo real
                   </span>
                 </div>
 
-                {/* Filtros estilo pestañitas sutiles */}
-                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
+                {/* Filtros estilo pestañitas sutiles con scroll horizontal en móvil */}
+                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs overflow-x-auto max-w-full">
+                  <button
+                    onClick={() => setChartFilter('juntas')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
+                      chartFilter === 'juntas'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    20 Juntas
+                  </button>
+                  <button
+                    onClick={() => setChartFilter('equipos')}
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
+                      chartFilter === 'equipos'
+                        ? 'bg-white text-slate-800 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    40 Equipos
+                  </button>
                   <button
                     onClick={() => setChartFilter('top_barrios')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'top_barrios'
                         ? 'bg-white text-slate-800 shadow-sm'
                         : 'text-slate-500 hover:text-slate-800'
@@ -567,23 +597,13 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                   </button>
                   <button
                     onClick={() => setChartFilter('reforzar')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
+                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'reforzar'
                         ? 'bg-white text-slate-800 shadow-sm'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
                     Por Reforzar
-                  </button>
-                  <button
-                    onClick={() => setChartFilter('equipos')}
-                    className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${
-                      chartFilter === 'equipos'
-                        ? 'bg-white text-slate-800 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    11 Equipos
                   </button>
                 </div>
               </div>
@@ -1014,7 +1034,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                           </a>
                           <a
                             href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
-                              `Hola ${v.nombre_completo}, te saludamos de la campaña de Janier Lloreda (SOMOS TURBO).`
+                              `Hola ${v.nombre_completo}, te saludamos de la campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
                             )}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -1149,18 +1169,22 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                       onChange={(e) => setNewRol(e.target.value as Rol)}
                       className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-sm font-semibold focus:border-[#0080FF] focus:outline-none focus:bg-white transition"
                     >
+                      <option value="lider_junta_directiva">Líder de Junta Directiva</option>
+                      <option value="lider_equipo_operativo">Líder de Equipo Operativo</option>
                       <option value="secretaria">Secretaria de Equipo Operativo</option>
                       <option value="coordinador">Coordinador General</option>
                       <option value="secretaria_general">Secretaria General</option>
-                      <option value="lider_junta_directiva">Líder de Equipo Operativo</option>
-                      <option value="gerente_general">Gerente General (Admin)</option>
+                      {/* BLINDADO: Solo Janier Lloreda (Gerente General) puede ver y asignar Gerente General */}
+                      {currentUser.rol === 'gerente_general' && (
+                        <option value="gerente_general">Gerente General (Admin)</option>
+                      )}
                     </select>
                   </div>
 
-                  {['secretaria', 'lider_junta_directiva'].includes(newRol) && (
+                  {['secretaria', 'lider_junta_directiva', 'lider_equipo_operativo'].includes(newRol) && (
                     <div>
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        Equipo Operativo Asignado
+                        {newRol === 'lider_junta_directiva' ? 'Junta Directiva Asignada (1 a 20)' : 'Equipo Operativo Asignado'}
                       </label>
                       <select
                         value={newJuntaId}
