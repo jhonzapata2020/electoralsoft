@@ -26,9 +26,15 @@ import {
   UserCheck,
   UserX,
   Sliders,
-  BarChart3
+  BarChart3,
+  Printer,
+  RefreshCw,
+  Briefcase
 } from 'lucide-react';
 import VoterRegistrationModal from './VoterRegistrationModal';
+import ReportPdfModal from './ReportPdfModal';
+import ContactInspectorDrawer from './ContactInspectorDrawer';
+import { formatTitleCase } from '../lib/formatters';
 
 interface Props {
   currentUser: UsuarioSistema;
@@ -43,10 +49,20 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('todos');
+  const [estudioFilter, setEstudioFilter] = useState<string>('todos');
+
+  // Datos en vivo sincronizados con la base de datos
+  const [liveVoters, setLiveVoters] = useState<Votante[]>(allVoters);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Modales
   const [voterModalOpen, setVoterModalOpen] = useState(false);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [pdfModalOpen, setPdfModalOpen] = useState(false);
+
+  // Inspector Lateral de Simpatizante (Estilo Aristotle CRUD)
+  const [selectedVoter, setSelectedVoter] = useState<Votante | null>(null);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
 
   // Formulario nuevo usuario
   const [newNombre, setNewNombre] = useState('');
@@ -90,21 +106,55 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
     }
   };
 
+  const fetchLiveVoters = async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/voters');
+      if (res.ok) {
+        const data = await res.json();
+        setLiveVoters(data as Votante[]);
+      }
+    } catch (err) {
+      console.warn('Error sincronizando censo en vivo', err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   useEffect(() => {
     loadAllUsers();
+    fetchLiveVoters();
+    const interval = setInterval(fetchLiveVoters, 12000);
+    return () => clearInterval(interval);
   }, []);
 
-  // Métricas
-  const totalVotos = allVoters.length;
-  const porcentajeVictoria = Math.min(100, Math.round((totalVotos / metaMagica) * 100));
-  const votosUrbanos = allVoters.filter((v) => v.zona === 'urbano').length;
-  const votosRurales = allVoters.filter((v) => v.zona === 'rural').length;
+  useEffect(() => {
+    if (allVoters && allVoters.length > 0) {
+      setLiveVoters((prev) => {
+        const map = new Map<string, Votante>();
+        prev.forEach((v) => map.set(v.documento, v));
+        allVoters.forEach((v) => map.set(v.documento, v));
+        return Array.from(map.values());
+      });
+    }
+  }, [allVoters]);
 
-  // Estadísticas de los 11 Equipos Operativos
+  const handleInternalVoterAdded = (v: Votante) => {
+    setLiveVoters((prev) => [v, ...prev.filter((item) => item.documento !== v.documento)]);
+    onVoterAdded(v);
+  };
+
+  // Métricas en tiempo real con datos de base de datos
+  const totalVotos = liveVoters.length;
+  const porcentajeVictoria = Math.min(100, Math.round((totalVotos / metaMagica) * 100));
+  const votosUrbanos = liveVoters.filter((v) => v.zona === 'urbano').length;
+  const votosRurales = liveVoters.filter((v) => v.zona === 'rural').length;
+
+  // Estadísticas de las 20 Juntas Directivas
   const equiposStats = territory.juntas.map((j: any) => {
-    const votos = allVoters.filter((v) => v.junta_directiva_id === j.id).length;
-    const lideresCount = systemUsers.filter((u) => u.junta_directiva_id === j.id).length;
-    const metaJunta = 1200;
+    const votos = liveVoters.filter((v) => Number(v.junta_directiva_id) === Number(j.id)).length;
+    const lideresCount = systemUsers.filter((u) => Number(u.junta_directiva_id) === Number(j.id)).length;
+    const metaJunta = 1000;
     const pct = Math.min(100, Math.round((votos / metaJunta) * 100));
     return {
       ...j,
@@ -118,8 +168,12 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
 
   // Estadísticas detalladas de los 40 Barrios de Turbo (Recuperación Territorial)
   const barrioStats = (territory.barrios || []).map((b: any) => {
-    const votos = allVoters.filter((v) => v.barrio_id === b.id || v.barrio_nombre === b.nombre).length;
-    const junta = territory.juntas.find((j: any) => j.id === b.junta_directiva_id);
+    const votos = liveVoters.filter(
+      (v) =>
+        Number(v.barrio_id) === Number(b.id) ||
+        (v.barrio_nombre && v.barrio_nombre.toLowerCase() === b.nombre.toLowerCase())
+    ).length;
+    const junta = territory.juntas.find((j: any) => Number(j.id) === Number(b.junta_directiva_id));
     return {
       ...b,
       votos,
@@ -133,10 +187,12 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   // Barrios por reforzar (los que tienen menor votación)
   const barriosPorReforzar = [...barrioStats].sort((a: any, b: any) => a.votos - b.votos);
 
-  // Barrio líder actual
-  const barrioLider = topBarrios[0] || { nombre: 'En proceso de censo', votos: 0 };
+  // Barrio líder actual (si no hay votos aún, mostrar aviso limpio)
+  const barrioLider = topBarrios.length > 0 && topBarrios[0].votos > 0
+    ? topBarrios[0]
+    : { nombre: 'En proceso de censo', votos: 0 };
 
-  // Cantidad de barrios que ya tienen votantes
+  // Cantidad de barrios que ya tienen votantes reales
   const barriosConVotos = barrioStats.filter((b: any) => b.votos > 0).length;
 
   // Datos para la gráfica central según el filtro seleccionado
@@ -257,16 +313,17 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
   };
 
   const exportToExcel = () => {
-    const exportData = allVoters.map((v, idx) => ({
+    const exportData = liveVoters.map((v, idx) => ({
       '#': idx + 1,
       'Cédula': v.documento,
-      'Nombre Completo': v.nombre_completo,
+      'Nombre Completo': formatTitleCase(v.nombre_completo),
       'Teléfono': v.telefono,
       'Nivel Estudio': v.estudio_realizado,
+      'Profesión / Oficio': v.profesion ? formatTitleCase(v.profesion) : 'N/A',
       'Zona': v.zona,
-      'Barrio / Vereda': v.barrio_nombre || v.vereda_nombre || 'N/A',
-      'Equipo Operativo': v.junta_directiva_id ? `Equipo #${v.junta_directiva_id}` : 'Rural',
-      'Fecha Registro': v.created_at ? new Date(v.created_at).toLocaleString() : 'N/A',
+      'Barrio / Vereda': v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'N/A'),
+      'Junta Directiva': v.junta_directiva_id ? `Junta #${v.junta_directiva_id}` : 'Rural',
+      'Fecha Registro': v.created_at ? new Date(v.created_at).toLocaleString('es-CO') : 'N/A',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -357,6 +414,16 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
               <span>Nuevo Votante</span>
             </button>
 
+            {/* Botón Reporte PDF */}
+            <button
+              onClick={() => setPdfModalOpen(true)}
+              className="p-2 sm:px-3 sm:py-2 bg-blue-50 hover:bg-blue-100 text-[#001E72] rounded-xl text-xs font-bold flex items-center gap-1.5 transition border border-blue-200 shadow-xs active:scale-95"
+              title="Ver Reporte Oficial en PDF / Imprimir"
+            >
+              <Printer className="w-4 h-4 text-[#0080FF]" />
+              <span className="hidden md:inline">Reporte PDF</span>
+            </button>
+
             {/* Botón Excel */}
             <button
               onClick={exportToExcel}
@@ -383,120 +450,164 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
       <main className="max-w-7xl mx-auto px-3 sm:px-6 pt-3 sm:pt-5 space-y-4 sm:space-y-5">
         
         {/* BOTONERA MÓVIL PRINCIPAL (Para que la secretaria cree usuarios y registre votantes de inmediato) */}
-        <div className="sm:hidden grid grid-cols-2 gap-2 pt-1">
-          <button
-            onClick={() => {
-              setCreatedUserSuccess(null);
-              setUserModalOpen(true);
-            }}
-            className="w-full py-2.5 px-3 bg-[#F4BD21] active:bg-[#e0ac1a] text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
-          >
-            <UserPlus className="w-4 h-4 text-[#001E72]" />
-            <span>Crear Usuario</span>
-          </button>
+        <div className="sm:hidden space-y-2 pt-1">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                setCreatedUserSuccess(null);
+                setUserModalOpen(true);
+              }}
+              className="w-full py-2.5 px-3 bg-[#F4BD21] active:bg-[#e0ac1a] text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+            >
+              <UserPlus className="w-4 h-4 text-[#001E72]" />
+              <span>Crear Usuario</span>
+            </button>
 
+            <button
+              onClick={() => setVoterModalOpen(true)}
+              className="w-full py-2.5 px-3 bg-[#3FBC24] active:bg-[#349e1e] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Nuevo Votante</span>
+            </button>
+          </div>
+
+          {/* Botón Móvil: Ver Reporte Oficial en PDF */}
           <button
-            onClick={() => setVoterModalOpen(true)}
-            className="w-full py-2.5 px-3 bg-[#3FBC24] active:bg-[#349e1e] text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition"
+            onClick={() => setPdfModalOpen(true)}
+            className="w-full py-2 px-3 bg-white border border-[#0080FF]/30 hover:bg-blue-50 text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs active:scale-95 transition"
           >
-            <UserCheck className="w-4 h-4" />
-            <span>Nuevo Votante</span>
+            <Printer className="w-4 h-4 text-[#0080FF]" />
+            <span>Ver Reporte Oficial en PDF (Voltear Celular)</span>
           </button>
         </div>
 
         {/* ========================================================================= */}
-        {/* ENCABEZADO Y FILA SUPERIOR: MÉTRICAS COMPACTAS 2x2 EN MÓVIL, 4 EN DESKTOP  */}
+        {/* ENCABEZADO Y FILA SUPERIOR: MÉTRICAS ESTILO ARISTÓTELES (FULL-WIDTH EN MÓVIL) */}
         {/* ========================================================================= */}
-        <div className="space-y-3">
-          {/* Título institucional en español */}
-          <div className="flex items-center justify-between">
+        <div className="space-y-3.5">
+          {/* Saludo Ejecutivo estilo Aristóteles con Botón En Vivo */}
+          <div className="flex items-center justify-between gap-2 pt-1">
             <div>
-              <h1 className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">
-                Sala de Mando Territorial
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
+                ¡Hola, {currentUser.nombre_completo.split(' ')[0]}! 👋
               </h1>
               <p className="text-xs text-slate-500 font-medium">
-                Panel de Control Electoral • Distrito de Turbo 2026
+                Sala de Mando y Control Electoral • Distrito de Turbo 2026
               </p>
             </div>
             
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs text-slate-500 font-medium">Meta Territorial:</span>
-              <span className="text-xs font-bold text-slate-800 bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200">
-                {totalVotos.toLocaleString()} / 20.000 Votos ({porcentajeVictoria}%)
-              </span>
-            </div>
+            <button
+              onClick={fetchLiveVoters}
+              disabled={isRefreshing}
+              className="px-3 py-1.5 bg-white hover:bg-slate-50 active:scale-95 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1.5 transition border border-slate-200 shadow-xs shrink-0"
+              title="Sincronizar datos en vivo de la base de datos"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-[#0080FF] ${isRefreshing ? 'animate-spin' : ''}`} />
+              <span className="text-xs font-bold text-slate-800">{isRefreshing ? 'Actualizando...' : 'En Vivo'}</span>
+              <span className="w-2 h-2 rounded-full bg-[#3FBC24] animate-pulse" />
+            </button>
           </div>
 
-          {/* GRID 2x2 EN MÓVIL, 4 COLUMNAS EN DESKTOP: PULIDO Y COMPACTO */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 items-stretch">
+          {/* TARJETAS ESTILO ARISTÓTELES: 1 COLUMNA EN MÓVIL (ESPACIOSAS Y LEGIBLES), 4 EN COMPUTADOR */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 items-stretch">
             
-            {/* Tarjeta 1: Verde Institucional #3FBC24 (Censo Territorial) */}
-            <div className="bg-[#f5fbf5] border border-[#3FBC24]/40 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 1: Censo Registrado (Verde Aristóteles) */}
+            <div className="bg-[#f0fdf4] border border-[#3FBC24]/50 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-700 block">
-                  Censo Registrado
-                </span>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5">
-                  {totalVotos.toLocaleString()}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                    Censo Registrado
+                  </span>
+                  <span className="text-[10px] font-black bg-[#3FBC24]/20 text-[#166534] px-2 py-0.5 rounded-md">
+                    META 20.000
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-0.5">
+                  {totalVotos.toLocaleString()}{' '}
+                  <span className="text-xs font-semibold text-slate-500">
+                    simpatizantes ({porcentajeVictoria}%)
+                  </span>
                 </div>
               </div>
-              <div className="text-[10px] sm:text-[11px] text-[#2f961a] font-bold pt-1.5 truncate">
-                {votosUrbanos} urb. • {votosRurales} rur.
+              <div className="text-xs text-[#166534] font-bold pt-2 border-t border-[#3FBC24]/20 mt-2 flex items-center justify-between">
+                <span>Zona Urbana: <strong>{votosUrbanos}</strong></span>
+                <span>•</span>
+                <span>Corregimientos: <strong>{votosRurales}</strong></span>
               </div>
             </div>
 
-            {/* Tarjeta 2: Amarillo Institucional #F4BD21 (Barrio Líder) */}
-            <div className="bg-[#fefef2] border border-[#F4BD21]/50 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 2: Barrio Líder (Amarillo Aristóteles) */}
+            <div className="bg-[#fffbeb] border border-[#F4BD21] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-700 block">
-                  Barrio Líder
-                </span>
-                <div className="text-xs sm:text-lg font-bold text-slate-900 mt-0.5 truncate" title={barrioLider.nombre}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                    Barrio Líder
+                  </span>
+                  <span className="text-[10px] font-black bg-[#F4BD21]/30 text-[#854d0e] px-2 py-0.5 rounded-md">
+                    FUERZA #1
+                  </span>
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 truncate" title={barrioLider.nombre}>
                   {barrioLider.nombre}
                 </div>
               </div>
-              <div className="text-[10px] sm:text-[11px] text-[#997300] font-bold pt-1.5 truncate">
-                {barrioLider.votos} simpatizantes
+              <div className="text-xs text-[#854d0e] font-bold pt-2 border-t border-[#F4BD21]/30 mt-2">
+                {barrioLider.votos} simpatizantes confirmados
               </div>
             </div>
 
-            {/* Tarjeta 3: Azul Oscuro Institucional #001E72 (Barrios por Reforzar) */}
-            <div className="bg-[#f8fafc] border border-[#001E72]/30 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 3: Cobertura de Barrios y Por Reforzar (Azul Institucional Aristóteles) */}
+            <div className="bg-[#f8fafc] border border-[#001E72]/40 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-700 block">
-                  Por Reforzar
-                </span>
-                <div className="text-xl sm:text-2xl font-black text-[#001E72] mt-0.5">
-                  {40 - barriosConVotos} <span className="text-xs font-normal text-slate-500">/ 40</span>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                    Cobertura de Barrios
+                  </span>
+                  <span className="text-[10px] font-black bg-[#001E72]/10 text-[#001E72] px-2 py-0.5 rounded-md">
+                    40 BARRIOS
+                  </span>
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-[#001E72] mt-0.5">
+                  {barriosConVotos}{' '}
+                  <span className="text-xs font-semibold text-slate-500">
+                    con presencia de 40
+                  </span>
                 </div>
               </div>
-              <div className="text-[10px] sm:text-[11px] text-[#001E72] font-semibold pt-1.5 truncate">
-                {barriosConVotos} con presencia activa
+              <div className="text-xs text-slate-600 font-semibold pt-2 border-t border-slate-200 mt-2 flex items-center justify-between">
+                <span>Por reforzar: <strong className="text-[#001E72] font-black">{40 - barriosConVotos} barrios</strong></span>
+                <span className="text-[11px] text-slate-400">Turbo Urbano</span>
               </div>
             </div>
 
-            {/* Tarjeta 4: Usuario Activo y Rol */}
-            <div className="bg-white border border-[#00CFFF]/40 rounded-xl sm:rounded-2xl p-3 sm:p-3.5 shadow-xs flex flex-col justify-between">
-              <div className="flex items-center justify-between gap-1">
-                <div className="min-w-0">
-                  <span className="text-xs font-bold text-slate-800 block truncate max-w-[95px] sm:max-w-[130px]">
-                    {currentUser.nombre_completo}
+            {/* Tarjeta 4: Comando General & Mandos (Celeste Aristóteles) */}
+            <div className="bg-[#f0f9ff] border border-[#0080FF]/40 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                    Comando Activo
                   </span>
-                  <span className="text-[10px] text-slate-500 capitalize block truncate">
-                    {currentUser.rol.replace(/_/g, ' ')}
-                  </span>
+                  <button
+                    onClick={() => setUserModalOpen(true)}
+                    className="px-2.5 py-0.5 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] text-[11px] font-black rounded-lg shadow-xs transition"
+                  >
+                    Admin
+                  </button>
                 </div>
-                <button
-                  onClick={() => setUserModalOpen(true)}
-                  className="px-2 py-0.5 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] text-[10px] sm:text-[11px] font-black rounded shadow-xs transition shrink-0"
-                >
-                  Admin
-                </button>
+                <div className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 truncate">
+                  {currentUser.nombre_completo}
+                </div>
+                <div className="text-xs text-slate-500 capitalize">
+                  {currentUser.rol.replace(/_/g, ' ')}
+                </div>
               </div>
 
-              <div className="flex items-center justify-between text-[10px] text-slate-600 font-medium pt-1.5 border-t border-slate-100">
-                <span>{systemUsers.length} mandos</span>
-                <span className="text-[#3FBC24] font-bold">● En línea</span>
+              <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-2 border-t border-blue-100 mt-2">
+                <span><strong>{systemUsers.length}</strong> mandos en estructura</span>
+                <span className="text-[#166534] font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#3FBC24] animate-pulse"></span> En línea
+                </span>
               </div>
             </div>
 
@@ -544,7 +655,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
             {/* ================================================================= */}
             {/* COLUMNA CENTRAL (8/12): GRÁFICA ELEGANTE CON LÍNEAS FINAS        */}
             {/* ================================================================= */}
-            <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3.5 overflow-hidden">
+            <div className="lg:col-span-8 min-w-0 max-w-full bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3.5 overflow-hidden">
               
               {/* Header del Gráfico con Título y Filtros Compactos */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
@@ -608,8 +719,8 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 </div>
               </div>
 
-              {/* Área del Gráfico con Barras Finas y Escala Estilo Aristotle (Responsive y con Scroll Táctil) */}
-              <div className="pt-2">
+              {/* Área del Gráfico con Barras Finas y Escala Estilo Aristotle (Ajuste Perfecto en Desktop y Touch en Móvil) */}
+              <div className="pt-2 w-full min-w-0 overflow-hidden">
                 {/* Indicador táctil en celular para que sepan que pueden deslizar suavemente */}
                 <div className="flex sm:hidden items-center justify-between text-[11px] text-slate-500 font-semibold mb-2 px-1 bg-slate-50 border border-slate-200/60 rounded-lg py-1">
                   <span className="flex items-center gap-1.5 text-[#0080FF]">
@@ -618,14 +729,10 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                   <span className="text-[10px] text-slate-400 font-mono">1-{chartItems.length}</span>
                 </div>
 
-                {/* Contenedor deslizable suave con touch-action pan-x que NUNCA desborda la pantalla */}
-                <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin touch-pan-x -mx-2 px-2 sm:mx-0 sm:px-0">
+                {/* Contenedor deslizable suave en pantallas pequeñas y full responsive en PC */}
+                <div className="w-full max-w-full overflow-x-auto pb-3 pt-1 scrollbar-thin touch-pan-x">
                   <div
-                    className="h-56 sm:h-64 flex items-end justify-between relative border-b border-slate-200 px-3"
-                    style={{
-                      minWidth: chartItems.length > 8 ? `${Math.max(680, chartItems.length * 44)}px` : '100%',
-                      width: chartItems.length > 8 ? `${Math.max(680, chartItems.length * 44)}px` : '100%',
-                    }}
+                    className="h-56 sm:h-64 flex items-end justify-between relative border-b border-slate-200 px-1 sm:px-2 w-full min-w-[560px] lg:min-w-0"
                   >
                     {/* Líneas horizontales de guía ultra-sutiles estilo Aristotle */}
                     <div className="absolute inset-x-0 top-1/4 border-b border-slate-100 pointer-events-none" />
@@ -641,23 +748,18 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                       return (
                         <div
                           key={item.id || idx}
-                          className="flex flex-col items-center h-full justify-end group relative shrink-0"
-                          style={{
-                            width: chartItems.length > 8 ? `${Math.max(38, Math.floor(100 / chartItems.length))}%` : `${Math.floor(100 / chartItems.length)}%`,
-                            maxWidth: '48px',
-                            minWidth: '36px',
-                          }}
+                          className="flex flex-col items-center h-full justify-end group relative flex-1 min-w-[20px] max-w-[32px] mx-auto"
                         >
                           {/* Número sobre la barra */}
-                          <div className="mb-1.5 transition">
-                            <span className="text-[11px] font-bold text-slate-700 font-mono">
+                          <div className="mb-1 transition">
+                            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 font-mono">
                               {item.votos || 0}
                             </span>
                           </div>
 
                           {/* La Barra Pulida y Fina con Paleta Oficial (Verde éxito, Amarillo alerta, Azul Somos) */}
                           <div
-                            className={`w-5 sm:w-6 rounded-t-sm transition-all duration-300 shadow-2xs ${
+                            className={`w-3.5 sm:w-5 rounded-t-sm transition-all duration-300 shadow-2xs ${
                               isWarning
                                 ? 'bg-[#F4BD21]'
                                 : isHigh
@@ -670,7 +772,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                           {/* Etiqueta del Eje X limpia sin montarse */}
                           <div className="mt-2 text-center w-full px-0.5">
                             <span 
-                              className="text-[10px] sm:text-[11px] font-bold text-slate-600 block truncate"
+                              className="text-[9px] sm:text-[10px] font-bold text-slate-600 block truncate"
                               title={item.nombre}
                             >
                               {item.nombre.replace('Junta Directiva ', 'JD ').replace('Equipo Operativo ', 'Eq ')}
@@ -703,7 +805,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
             {/* ================================================================= */}
             {/* COLUMNA LATERAL (4/12): LISTA DETALLADA ESTILO ARISTOTLE          */}
             {/* ================================================================= */}
-            <div className="lg:col-span-4 space-y-3">
+            <div className="lg:col-span-4 min-w-0 max-w-full space-y-3">
               
               {/* Caja 1: Top Barrios con Más Votantes (Verde #3FBC24) */}
               <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
@@ -906,172 +1008,357 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
           </div>
         )}
 
-        {/* TAB 3: Censo General de Votantes (Estilo Aristotle con Tabla y Tarjetas de Contacto) */}
-        {activeTab === 'censo' && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                  Censo Electoral de Simpatizantes
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Total de {allVoters.length} simpatizantes registrados en Turbo.
-                </p>
+        {/* TAB 3: Censo General de Votantes y Banco de Hojas de Vida */}
+        {activeTab === 'censo' && (() => {
+          const profCount = liveVoters.filter((v) => v.estudio_realizado === 'profesional' || v.estudio_realizado === 'posgrado').length;
+          const tecnCount = liveVoters.filter((v) => v.estudio_realizado === 'tecnico' || v.estudio_realizado === 'tecnologo').length;
+          const bachCount = liveVoters.filter((v) => v.estudio_realizado === 'bachiller' || v.estudio_realizado === 'primaria').length;
+
+          const filteredVoters = liveVoters.filter((v) => {
+            const searchLower = searchTerm.toLowerCase().trim();
+            const matchesSearch =
+              !searchLower ||
+              v.nombre_completo.toLowerCase().includes(searchLower) ||
+              v.documento.includes(searchLower) ||
+              (v.profesion && v.profesion.toLowerCase().includes(searchLower));
+
+            if (!matchesSearch) return false;
+
+            if (estudioFilter === 'todos') return true;
+            if (estudioFilter === 'profesional') return v.estudio_realizado === 'profesional' || v.estudio_realizado === 'posgrado';
+            if (estudioFilter === 'tecnico') return v.estudio_realizado === 'tecnico' || v.estudio_realizado === 'tecnologo';
+            if (estudioFilter === 'bachiller') return v.estudio_realizado === 'bachiller' || v.estudio_realizado === 'primaria';
+            return true;
+          });
+
+          return (
+            <div className="space-y-4">
+              {/* Encabezado del Censo y Botones de Reporte */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+                <div>
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
+                    <Users className="w-5 h-5 text-[#0080FF]" /> Censo y Banco de Hojas de Vida
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">
+                    {liveVoters.length} simpatizantes registrados en Turbo • {profCount} profesionales listos para convocatorias
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => setPdfModalOpen(true)}
+                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition border border-blue-200 shadow-xs"
+                    title="Ver reporte oficial listo para imprimir o guardar en PDF"
+                  >
+                    <Printer className="w-4 h-4 text-[#0080FF]" />
+                    <span>Reporte PDF</span>
+                  </button>
+
+                  <button
+                    onClick={exportToExcel}
+                    className="px-3.5 py-2 bg-[#3FBC24] hover:bg-[#349e1e] active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition shadow-xs"
+                    title="Descargar censo completo en formato Excel"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Descargar Excel</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                {/* Selector Vista: Tabla vs Tarjetas */}
-                <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200">
+              {/* Filtros de Nivel de Estudio y Buscador Inteligente por Profesión */}
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                {/* Pastillas de Filtro Rápido (Hojas de Vida) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
                   <button
-                    onClick={() => setVoterViewMode('tabla')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      voterViewMode === 'tabla'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900'
+                    onClick={() => setEstudioFilter('todos')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
+                      estudioFilter === 'todos'
+                        ? 'bg-[#001E72] text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    Tabla
+                    Todos ({liveVoters.length})
                   </button>
                   <button
-                    onClick={() => setVoterViewMode('tarjetas')}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                      voterViewMode === 'tarjetas'
-                        ? 'bg-white text-slate-900 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900'
+                    onClick={() => setEstudioFilter('profesional')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
+                      estudioFilter === 'profesional'
+                        ? 'bg-[#0080FF] text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    Fichas Móviles
+                    🎓 Profesionales ({profCount})
+                  </button>
+                  <button
+                    onClick={() => setEstudioFilter('tecnico')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
+                      estudioFilter === 'tecnico'
+                        ? 'bg-[#3FBC24] text-white shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    ⚙️ Técnicos ({tecnCount})
+                  </button>
+                  <button
+                    onClick={() => setEstudioFilter('bachiller')}
+                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
+                      estudioFilter === 'bachiller'
+                        ? 'bg-[#F4BD21] text-[#001E72] shadow-xs'
+                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    📚 Bachilleres ({bachCount})
                   </button>
                 </div>
 
-                <div className="relative w-full sm:w-64">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Buscar cédula o nombre..."
-                    className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0080FF]"
-                  />
+                {/* Buscador por Nombre, Cédula o Profesión */}
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                    <button
+                      onClick={() => setVoterViewMode('tabla')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        voterViewMode === 'tabla'
+                          ? 'bg-[#001E72] text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>📊 Modo CRUD</span>
+                    </button>
+                    <button
+                      onClick={() => setVoterViewMode('tarjetas')}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                        voterViewMode === 'tarjetas'
+                          ? 'bg-[#001E72] text-white shadow-xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <span>📱 Fichas</span>
+                    </button>
+                  </div>
+
+                  <div className="relative w-full sm:w-80">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Buscar nombre, cédula o profesión (ej. enfermera)..."
+                      className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0080FF] shadow-xs"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* VISTA 1: TABLA CLÁSICA */}
-            {voterViewMode === 'tabla' && (
-              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-700 uppercase font-bold border-b border-slate-200">
-                      <tr>
-                        <th className="p-3.5">Cédula</th>
-                        <th className="p-3.5">Nombre Completo</th>
-                        <th className="p-3.5">Teléfono</th>
-                        <th className="p-3.5">Barrio / Vereda</th>
-                        <th className="p-3.5">Estudios</th>
-                        <th className="p-3.5">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 text-slate-700">
-                      {allVoters
-                        .filter(
-                          (v) =>
-                            v.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            v.documento.includes(searchTerm)
-                        )
-                        .map((v) => (
-                          <tr key={v.id} className="hover:bg-slate-50/80 transition">
-                            <td className="p-3.5 font-mono font-bold text-slate-900">{v.documento}</td>
-                            <td className="p-3.5 font-bold text-slate-900">{v.nombre_completo}</td>
-                            <td className="p-3.5 text-slate-800 font-mono">{v.telefono}</td>
-                            <td className="p-3.5 text-slate-600">
-                              {v.barrio_nombre || v.vereda_nombre || 'Turbo'}
-                            </td>
-                            <td className="p-3.5 capitalize text-slate-600">{v.estudio_realizado}</td>
-                            <td className="p-3.5">
-                              {v._synced !== false ? (
-                                <span className="text-[10px] text-[#2f961a] bg-[#3FBC24]/10 px-2 py-0.5 rounded-full border border-[#3FBC24]/30 font-bold">
-                                  Sincronizado
-                                </span>
-                              ) : (
-                                <span className="text-[10px] text-[#9a7407] bg-[#F4BD21]/15 px-2 py-0.5 rounded-full border border-[#F4BD21]/40 font-bold">
-                                  En Celular
-                                </span>
-                              )}
+              {/* VISTA 1: TABLA CRUD PROFESIONAL ESTILO ARISTÓTELES (CON CLIC PARA ABRIR EXPEDIENTE LATERAL) */}
+              {voterViewMode === 'tabla' && (
+                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                    <span>💡 Haz clic sobre cualquier fila para abrir el <strong>Expediente Completo estilo Aristóteles</strong>.</span>
+                    <span className="font-mono text-[11px] font-bold text-slate-700">{filteredVoters.length} registros</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-[#001E72] text-white uppercase font-bold border-b border-slate-200">
+                        <tr>
+                          <th className="p-3 w-8 text-center">#</th>
+                          <th className="p-3">Cédula</th>
+                          <th className="p-3">Nombre Completo</th>
+                          <th className="p-3">Teléfono</th>
+                          <th className="p-3">Barrio / Vereda</th>
+                          <th className="p-3">Nivel de Estudio</th>
+                          <th className="p-3">Profesión u Oficio</th>
+                          <th className="p-3 text-center">Estado</th>
+                          <th className="p-3 text-right">Expediente</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 text-slate-700">
+                        {filteredVoters.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="p-8 text-center text-slate-400">
+                              No se encontraron personas con ese filtro o profesión.
                             </td>
                           </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                        ) : (
+                          filteredVoters.map((v, idx) => {
+                            const isSelected = selectedVoter?.id === v.id;
+                            const formattedName = formatTitleCase(v.nombre_completo);
+                            const initials = formattedName
+                              .split(' ')
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase();
+
+                            return (
+                              <tr
+                                key={v.id || idx}
+                                onClick={() => {
+                                  setSelectedVoter(v);
+                                  setInspectorOpen(true);
+                                }}
+                                className={`transition cursor-pointer select-none ${
+                                  isSelected
+                                    ? 'bg-blue-50/90 ring-1 ring-[#0080FF]'
+                                    : 'hover:bg-slate-50/90'
+                                }`}
+                              >
+                                <td className="p-3 text-center font-mono text-slate-400 font-bold">
+                                  {idx + 1}
+                                </td>
+                                <td className="p-3 font-mono font-bold text-slate-900">
+                                  {v.documento}
+                                </td>
+                                <td className="p-3 font-bold text-slate-900">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-md bg-[#001E72] text-white flex items-center justify-center font-black text-[9px] shrink-0">
+                                      {initials}
+                                    </div>
+                                    <span className="truncate">{formattedName}</span>
+                                  </div>
+                                </td>
+                                <td className="p-3 text-slate-800 font-mono">
+                                  <a
+                                    href={`tel:${v.telefono}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="hover:text-[#0080FF] inline-flex items-center gap-1 font-semibold"
+                                  >
+                                    <Phone className="w-3 h-3 text-[#0080FF]" /> {v.telefono}
+                                  </a>
+                                </td>
+                                <td className="p-3 text-slate-600">
+                                  {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
+                                </td>
+                                <td className="p-3 capitalize text-slate-600 font-medium">
+                                  {v.estudio_realizado || 'Bachiller'}
+                                </td>
+                                <td className="p-3">
+                                  {v.profesion ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0080FF] font-bold rounded-md border border-blue-200 text-[11px]">
+                                      <Briefcase className="w-3 h-3 shrink-0" /> {formatTitleCase(v.profesion)}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 italic text-[11px]">—</span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-center">
+                                  {v._synced !== false ? (
+                                    <span className="text-[10px] text-[#166534] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                                      En Nube
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-[#854d0e] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-bold">
+                                      En Celular
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-3 text-right">
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedVoter(v);
+                                      setInspectorOpen(true);
+                                    }}
+                                    className="px-2.5 py-1 bg-[#0080FF]/10 hover:bg-[#0080FF] hover:text-white text-[#0080FF] rounded-lg font-black text-[10px] uppercase tracking-wider transition"
+                                  >
+                                    Ficha →
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* VISTA 2: FICHAS MÓVILES (Estilo Aristotle Phone Card) */}
-            {voterViewMode === 'tarjetas' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {allVoters
-                  .filter(
-                    (v) =>
-                      v.nombre_completo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      v.documento.includes(searchTerm)
-                  )
-                  .map((v) => {
-                    const initials = v.nombre_completo
-                      .split(' ')
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join('')
-                      .toUpperCase();
-                    const cleanTel = v.telefono.replace(/\D/g, '');
-                    const telWhatsApp = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
+              {/* VISTA 2: FICHAS MÓVILES (Estilo Aristotle Phone Card con Botón de Expediente) */}
+              {voterViewMode === 'tarjetas' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                  {filteredVoters.length === 0 ? (
+                    <div className="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
+                      No se encontraron personas con ese filtro o profesión.
+                    </div>
+                  ) : (
+                    filteredVoters.map((v) => {
+                      const formattedName = formatTitleCase(v.nombre_completo);
+                      const initials = formattedName
+                        .split(' ')
+                        .map((n) => n[0])
+                        .slice(0, 2)
+                        .join('')
+                        .toUpperCase();
+                      const cleanTel = v.telefono.replace(/\D/g, '');
+                      const telWhatsApp = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
 
-                    return (
-                      <div
-                        key={v.id}
-                        className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition space-y-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="w-11 h-11 rounded-2xl bg-[#001E72] text-white flex items-center justify-center font-black text-sm shadow-md shrink-0 border-b-2 border-[#F4BD21]">
-                            {initials}
+                      return (
+                        <div
+                          key={v.id}
+                          className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition space-y-3"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="w-11 h-11 rounded-2xl bg-[#001E72] text-white flex items-center justify-center font-black text-sm shadow-md shrink-0 border-b-2 border-[#F4BD21]">
+                              {initials}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-bold text-slate-900 text-sm truncate">{formattedName}</h4>
+                              <p className="text-xs text-slate-500 font-mono">CC: {v.documento}</p>
+                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                  📍 {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
+                                </span>
+                                {v.profesion && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-[#0080FF] border border-blue-100">
+                                    💼 {formatTitleCase(v.profesion)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-bold text-slate-900 text-sm truncate">{v.nombre_completo}</h4>
-                            <p className="text-xs text-slate-500 font-mono">CC: {v.documento}</p>
-                            <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
-                              📍 {v.barrio_nombre || v.vereda_nombre || 'Turbo'}
-                            </span>
+
+                          {/* Botones de Contacto Rápido: Llamar, WhatsApp Campaña y Ver Ficha */}
+                          <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                            <div className="flex items-center gap-2">
+                              <a
+                                href={`tel:${v.telefono}`}
+                                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                              >
+                                <Phone className="w-3.5 h-3.5 text-[#0080FF]" />
+                                <span>Llamar</span>
+                              </a>
+                              <a
+                                href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
+                                  `Hola ${formattedName}, te saludamos de la campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 py-2 px-3 rounded-xl bg-[#3FBC24]/15 hover:bg-[#3FBC24]/25 text-[#2f961a] font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                              >
+                                <Send className="w-3.5 h-3.5" />
+                                <span>WhatsApp</span>
+                              </a>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                setSelectedVoter(v);
+                                setInspectorOpen(true);
+                              }}
+                              className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-[#001E72] font-black text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95"
+                            >
+                              <span>Ver Expediente Completo (Aristóteles) →</span>
+                            </button>
                           </div>
                         </div>
-
-                        {/* Botones de Contacto Rápido (Llamar y WhatsApp) */}
-                        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-                          <a
-                            href={`tel:${v.telefono}`}
-                            className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition"
-                          >
-                            <Phone className="w-3.5 h-3.5 text-[#0080FF]" />
-                            <span>Llamar</span>
-                          </a>
-                          <a
-                            href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
-                              `Hola ${v.nombre_completo}, te saludamos de la campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
-                            )}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex-1 py-2 px-3 rounded-xl bg-[#3FBC24]/15 hover:bg-[#3FBC24]/25 text-[#2f961a] font-bold text-xs flex items-center justify-center gap-1.5 transition"
-                          >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>WhatsApp</span>
-                          </a>
-                        </div>
-                      </div>
-                    );
-                  })}
-              </div>
-            )}
-          </div>
-        )}
+                      );
+                    })
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })()}
       </main>
 
       {/* Modal Crear Usuario (Control Total de Janier Lloreda) */}
@@ -1260,7 +1547,23 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
         currentUser={currentUser}
         isOpen={voterModalOpen}
         onClose={() => setVoterModalOpen(false)}
-        onVoterAdded={onVoterAdded}
+        onVoterAdded={handleInternalVoterAdded}
+      />
+
+      {/* Modal Reporte en PDF Oficial (Volteable en Horizontal en Celulares) */}
+      <ReportPdfModal
+        isOpen={pdfModalOpen}
+        onClose={() => setPdfModalOpen(false)}
+        voters={liveVoters}
+        currentUser={currentUser}
+        onExportExcel={exportToExcel}
+      />
+
+      {/* Inspector Lateral de Simpatizante (Estilo Aristotle Contacts Inspector) */}
+      <ContactInspectorDrawer
+        voter={selectedVoter}
+        isOpen={inspectorOpen}
+        onClose={() => setInspectorOpen(false)}
       />
 
       {/* 
@@ -1301,9 +1604,9 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
         >
           <UserCheck className="w-5 h-5 stroke-[2.5]" />
           <span className="text-[10px]">Censo</span>
-          {allVoters.length > 0 && (
+          {liveVoters.length > 0 && (
             <span className="absolute top-0 right-1 bg-[#3FBC24] text-white text-[9px] font-black px-1.5 py-0.2 rounded-full shadow-xs">
-              {allVoters.length}
+              {liveVoters.length}
             </span>
           )}
         </button>

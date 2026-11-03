@@ -71,6 +71,7 @@ export interface Votante {
   nombre_completo: string;
   telefono: string;
   estudio_realizado: NivelEstudio;
+  profesion?: string | null;
   correo?: string | null;
   zona: Zona;
   junta_directiva_id?: number | null;

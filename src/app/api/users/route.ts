@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { formatTitleCase } from '@/lib/formatters';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ikklyhdpdyyewlcwkwjs.supabase.co';
 const SECRET_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -30,7 +31,11 @@ export async function GET(req: Request) {
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    const mapped = (data || []).map((u: any) => ({
+      ...u,
+      nombre_completo: formatTitleCase(u.nombre_completo),
+    }));
+    return NextResponse.json(mapped);
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error al obtener usuarios' }, { status: 500 });
   }
@@ -55,7 +60,7 @@ export async function POST(req: Request) {
     } = body;
 
     const docClean = (documento || '').toString().trim();
-    const nombreClean = (nombre_completo || '').toString().trim();
+    const nombreClean = formatTitleCase((nombre_completo || '').toString());
     const telClean = (telefono || '').toString().trim();
 
     if (!docClean || !nombreClean || !telClean) {

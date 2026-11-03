@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { formatTitleCase } from '@/lib/formatters';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://ikklyhdpdyyewlcwkwjs.supabase.co';
 const SECRET_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -51,7 +52,27 @@ export async function GET(req: Request) {
     }
 
     const data = await res.json();
-    return NextResponse.json(data);
+    const mapped = (data || []).map((v: any) => {
+      let profesion = null;
+      let correoClean = v.correo;
+      if (v.correo && v.correo.includes('prof:')) {
+        const match = v.correo.match(/prof:([^|]+)/);
+        if (match) {
+          profesion = formatTitleCase(match[1]);
+          correoClean = v.correo.replace(/prof:[^|]+(\| )?/, '').trim() || null;
+        }
+      } else if (v.correo && !v.correo.includes('@')) {
+        profesion = formatTitleCase(v.correo);
+        correoClean = null;
+      }
+      return {
+        ...v,
+        nombre_completo: formatTitleCase(v.nombre_completo),
+        profesion,
+        correo: correoClean,
+      };
+    });
+    return NextResponse.json(mapped);
   } catch (err: any) {
     return NextResponse.json({ error: err.message || 'Error al obtener votantes' }, { status: 500 });
   }
@@ -61,11 +82,27 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const items = Array.isArray(body) ? body : [body];
+    const rawItems = Array.isArray(body) ? body : [body];
 
-    if (items.length === 0) {
+    if (rawItems.length === 0) {
       return NextResponse.json({ error: 'No se enviaron datos para registrar.' }, { status: 400 });
     }
+
+    // Formatear nombres y profesión en Title Case y serializar profesión en correo
+    const items = rawItems.map((item: any) => {
+      const { profesion, nombre_completo, ...rest } = item;
+      const formattedName = formatTitleCase(nombre_completo);
+      const formattedProf = profesion && profesion.trim() ? formatTitleCase(profesion) : null;
+      let correoFinal = rest.correo || '';
+      if (formattedProf) {
+        correoFinal = correoFinal ? `prof:${formattedProf} | ${correoFinal}` : `prof:${formattedProf}`;
+      }
+      return {
+        ...rest,
+        nombre_completo: formattedName,
+        correo: correoFinal || null,
+      };
+    });
 
     const endpoint = `${SUPABASE_URL}/rest/v1/votantes?on_conflict=documento`;
     const res = await fetch(endpoint, {

@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, CheckCircle2, AlertCircle, Loader2, Phone, User, GraduationCap, MapPin, Mail } from 'lucide-react';
+import { X, UserPlus, CheckCircle2, AlertCircle, Loader2, Phone, User, GraduationCap, MapPin, Mail, Briefcase } from 'lucide-react';
 import { UsuarioSistema, NivelEstudio, Votante } from '../types';
 import { getCachedTerritory, registerVoter, getLocalVoters } from '../lib/offline-sync';
 import { supabase } from '../lib/supabase';
+import { formatTitleCase } from '../lib/formatters';
 
 interface Props {
   currentUser: UsuarioSistema;
@@ -18,6 +19,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
   const [documento, setDocumento] = useState('');
   const [telefono, setTelefono] = useState('');
   const [estudio, setEstudio] = useState<NivelEstudio>('bachiller');
+  const [profesion, setProfesion] = useState('');
   const [correo, setCorreo] = useState('');
 
   // Territorio
@@ -46,6 +48,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
       setDocumento('');
       setTelefono('');
       setEstudio('bachiller');
+      setProfesion('');
       setCorreo('');
       setDocExists(null);
       setDocErrorMsg('');
@@ -132,9 +135,10 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
 
     const result = await registerVoter({
       documento: documento.trim(),
-      nombre_completo: nombre.trim(),
+      nombre_completo: formatTitleCase(nombre),
       telefono: telefono.trim(),
       estudio_realizado: estudio,
+      profesion: profesion.trim() ? formatTitleCase(profesion) : null,
       correo: correo.trim() || null,
       zona: currentUser.zona,
       junta_directiva_id: isUrbano ? Number(juntaId) || null : null,
@@ -242,6 +246,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                 required
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
+                onBlur={() => setNombre(formatTitleCase(nombre))}
                 placeholder="Nombres y Apellidos"
                 className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none transition"
               />
@@ -365,6 +370,30 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                 <option value="posgrado">Posgrado</option>
               </select>
             </div>
+          </div>
+
+          {/* Profesión u Oficio (Banco de Hojas de Vida) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                Profesión u Oficio
+              </label>
+              <span className="text-[11px] text-[#0080FF] font-semibold">Banco de Hojas de Vida</span>
+            </div>
+            <div className="relative">
+              <Briefcase className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={profesion}
+                onChange={(e) => setProfesion(e.target.value)}
+                onBlur={() => setProfesion(formatTitleCase(profesion))}
+                placeholder="Ej. Enfermera, Abogado, Contador, Docente, Conductor..."
+                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none transition"
+              />
+            </div>
+            <p className="text-[11px] text-slate-400 font-medium mt-1">
+              💡 Permite a Janier ubicar hojas de vida cuando surjan vacantes o convocatorias.
+            </p>
           </div>
 
           {/* Botón Guardar Táctil Gigante */}

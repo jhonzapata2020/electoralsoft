@@ -18,12 +18,14 @@ import {
   Loader2,
   Check,
   RefreshCw,
-  Send
+  Send,
+  Briefcase
 } from 'lucide-react';
 import MobileDrawer from './MobileDrawer';
 import { getCachedTerritory, registerVoter, getLocalVoters } from '../lib/offline-sync';
 import { supabase } from '../lib/supabase';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { formatTitleCase } from '../lib/formatters';
 
 interface Props {
   currentUser: UsuarioSistema;
@@ -45,6 +47,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
   const [documento, setDocumento] = useState('');
   const [telefono, setTelefono] = useState('');
   const [estudio, setEstudio] = useState<NivelEstudio>('bachiller');
+  const [profesion, setProfesion] = useState('');
   const [correo, setCorreo] = useState('');
 
   // Territorio
@@ -143,11 +146,13 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
     const selectedBarrio = availableBarrios.find((b) => b.id === Number(barrioId));
     const selectedVereda = availableVeredas.find((v) => v.id === Number(veredaId));
 
+    const formattedNombre = formatTitleCase(nombre);
     const result = await registerVoter({
       documento: documento.trim(),
-      nombre_completo: nombre.trim(),
+      nombre_completo: formattedNombre,
       telefono: telefono.trim(),
       estudio_realizado: estudio,
+      profesion: profesion.trim() ? formatTitleCase(profesion) : null,
       correo: correo.trim() || null,
       zona: currentUser.zona,
       junta_directiva_id: isUrbano ? Number(juntaId) : null,
@@ -163,11 +168,12 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
 
     if (result.success) {
       onVoterAdded(result.voter);
-      setSaveSuccessMsg(`¡${nombre.trim()} registrado(a) con éxito!`);
+      setSaveSuccessMsg(`¡${formattedNombre} registrado(a) con éxito!`);
       // Limpiar para el siguiente de inmediato
       setNombre('');
       setDocumento('');
       setTelefono('');
+      setProfesion('');
       setCorreo('');
       setDocExists(null);
 
@@ -374,6 +380,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                   required
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
+                  onBlur={() => setNombre(formatTitleCase(nombre))}
                   placeholder="Nombres y Apellidos"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none"
                 />
@@ -462,6 +469,23 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                       <option value="profesional">Profesional</option>
                       <option value="posgrado">Posgrado</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
+                        Profesión u Oficio
+                      </label>
+                      <span className="text-[11px] text-[#0080FF] font-semibold">Banco de Hojas de Vida</span>
+                    </div>
+                    <input
+                      type="text"
+                      value={profesion}
+                      onChange={(e) => setProfesion(e.target.value)}
+                      onBlur={() => setProfesion(formatTitleCase(profesion))}
+                      placeholder="Ej. Enfermera, Abogado, Contador, Docente..."
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF]"
+                    />
                   </div>
 
                   <div>
@@ -583,6 +607,14 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                             <span>CC: <strong className="text-slate-800 font-mono">{v.documento}</strong></span>
                             <span>•</span>
                             <span className="text-slate-600 font-semibold truncate">{v.barrio_nombre || v.vereda_nombre || 'Turbo'}</span>
+                            {v.profesion && (
+                              <>
+                                <span>•</span>
+                                <span className="text-[#0080FF] font-bold text-[11px] bg-blue-50 px-1.5 py-0.5 rounded">
+                                  💼 {v.profesion}
+                                </span>
+                              </>
+                            )}
                           </div>
                         </div>
                       </div>

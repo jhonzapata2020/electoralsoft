@@ -86,6 +86,17 @@ export default function HomePage() {
   const handleLogin = (user: UsuarioSistema) => {
     setLocalCurrentUser(user);
     setCurrentUser(user);
+    // Sincronizar censo de inmediato al iniciar sesión
+    if (typeof navigator !== 'undefined' && navigator.onLine) {
+      fetch('/api/voters')
+        .then((r) => r.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setVoters(data as Votante[]);
+          }
+        })
+        .catch((e) => console.warn(e));
+    }
   };
 
   const handleLogout = () => {

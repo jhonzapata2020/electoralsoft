@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { UsuarioSistema, Votante, Rol } from '../types';
 import { supabase } from '../lib/supabase';
 import { getCachedTerritory } from '../lib/offline-sync';
+import { formatTitleCase } from '../lib/formatters';
 import {
   Users,
   UserPlus,
@@ -103,9 +104,10 @@ export default function SecretaryDashboard({ currentUser, onLogout, onVoterAdded
     const pass = newLeaderPassword.trim() || newLeaderDoc.trim();
     const metaMinima = newLeaderRol === 'lider_equipo_operativo' ? 25 : 15;
 
+    const formattedNombre = formatTitleCase(newLeaderNombre);
     const newLeaderPayload = {
       documento: newLeaderDoc.trim(),
-      nombre_completo: newLeaderNombre.trim(),
+      nombre_completo: formattedNombre,
       telefono: newLeaderTel.trim(),
       correo: `pwd:${pass}`,
       rol: newLeaderRol,
@@ -431,6 +433,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                       required
                       value={newLeaderNombre}
                       onChange={(e) => setNewLeaderNombre(e.target.value)}
+                      onBlur={() => setNewLeaderNombre(formatTitleCase(newLeaderNombre))}
                       placeholder="Ej. Andrés Mosquera"
                       className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs font-semibold focus:bg-white focus:border-[#0080FF] focus:outline-none"
                     />
