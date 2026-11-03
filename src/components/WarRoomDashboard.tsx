@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { UsuarioSistema, Votante, Rol } from '../types';
 import { supabase } from '../lib/supabase';
 import { getCachedTerritory } from '../lib/offline-sync';
@@ -29,8 +29,19 @@ import {
   BarChart3,
   Printer,
   RefreshCw,
-  Briefcase
+  Briefcase,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  RotateCcw,
+  Sparkles,
+  SlidersHorizontal
 } from 'lucide-react';
+import VoterFilterSidebar, {
+  VoterFilterState,
+  initialFilterState,
+  countActiveFilters
+} from './VoterFilterSidebar';
 import VoterRegistrationModal from './VoterRegistrationModal';
 import ReportPdfModal from './ReportPdfModal';
 import ContactInspectorDrawer from './ContactInspectorDrawer';
@@ -63,6 +74,26 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   // Inspector Lateral de Simpatizante (Estilo Aristotle CRUD)
   const [selectedVoter, setSelectedVoter] = useState<Votante | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [voterViewMode, setVoterViewMode] = useState<'tabla' | 'tarjetas'>('tabla');
+
+  // Filtros Avanzados y Paginación Estilo Aristóteles Campaign Manager
+  const [filters, setFilters] = useState<VoterFilterState>(initialFilterState);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+
+  // Profesiones detectadas en tiempo real para autocompletado y banco de hojas de vida
+  const availableProfessions = useMemo<[string, number][]>(() => {
+    const map: Record<string, number> = {};
+    liveVoters.forEach((v) => {
+      if (v.profesion && v.profesion.trim()) {
+        const clean = formatTitleCase(v.profesion.trim());
+        map[clean] = (map[clean] || 0) + 1;
+      }
+    });
+    return Object.entries(map).sort((a, b) => b[1] - a[1]);
+  }, [liveVoters]);
 
   // Formulario nuevo usuario
   const [newNombre, setNewNombre] = useState('');
@@ -89,7 +120,7 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   // Filtro de la Gráfica Central de Barrios (Estilo Aristotle)
   const [chartFilter, setChartFilter] = useState<'juntas' | 'equipos' | 'top_barrios' | 'reforzar'>('juntas');
   // Vista del Censo (Tabla o Tarjetas estilo Aristotle)
-  const [voterViewMode, setVoterViewMode] = useState<'tabla' | 'tarjetas'>('tabla');
+
 
   const loadAllUsers = async () => {
     setLoading(true);
@@ -1008,46 +1039,205 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
           </div>
         )}
 
-        {/* TAB 3: Censo General de Votantes y Banco de Hojas de Vida */}
+        {/* TAB 3: Censo General de Votantes y Banco de Hojas de Vida (Estilo Aristóteles con Sidebar de Filtros) */}
         {activeTab === 'censo' && (() => {
           const profCount = liveVoters.filter((v) => v.estudio_realizado === 'profesional' || v.estudio_realizado === 'posgrado').length;
           const tecnCount = liveVoters.filter((v) => v.estudio_realizado === 'tecnico' || v.estudio_realizado === 'tecnologo').length;
-          const bachCount = liveVoters.filter((v) => v.estudio_realizado === 'bachiller' || v.estudio_realizado === 'primaria').length;
+          const activeFiltersCount = countActiveFilters(filters);
 
           const filteredVoters = liveVoters.filter((v) => {
-            const searchLower = searchTerm.toLowerCase().trim();
-            const matchesSearch =
-              !searchLower ||
-              v.nombre_completo.toLowerCase().includes(searchLower) ||
-              v.documento.includes(searchLower) ||
-              (v.profesion && v.profesion.toLowerCase().includes(searchLower));
+            // 1. Buscador global (search)
+            if (filters.search.trim()) {
+              const q = filters.search.toLowerCase().trim();
+              const matchName = v.nombre_completo.toLowerCase().includes(q);
+              const matchDoc = v.documento.includes(q);
+              const matchProf = v.profesion ? v.profesion.toLowerCase().includes(q) : false;
+              const matchBarrio = v.barrio_nombre ? v.barrio_nombre.toLowerCase().includes(q) : false;
+              const matchVereda = v.vereda_nombre ? v.vereda_nombre.toLowerCase().includes(q) : false;
+              if (!matchName && !matchDoc && !matchProf && !matchBarrio && !matchVereda) return false;
+            }
 
-            if (!matchesSearch) return false;
+            // 2. Estudio
+            if (filters.estudio !== 'todos') {
+              if (filters.estudio === 'profesional') {
+                if (v.estudio_realizado !== 'profesional' && v.estudio_realizado !== 'posgrado') return false;
+              } else if (filters.estudio === 'tecnico') {
+                if (v.estudio_realizado !== 'tecnico' && v.estudio_realizado !== 'tecnologo') return false;
+              } else if (filters.estudio === 'bachiller') {
+                if (v.estudio_realizado !== 'bachiller') return false;
+              } else if (filters.estudio === 'primaria') {
+                if (v.estudio_realizado !== 'primaria') return false;
+              }
+            }
 
-            if (estudioFilter === 'todos') return true;
-            if (estudioFilter === 'profesional') return v.estudio_realizado === 'profesional' || v.estudio_realizado === 'posgrado';
-            if (estudioFilter === 'tecnico') return v.estudio_realizado === 'tecnico' || v.estudio_realizado === 'tecnologo';
-            if (estudioFilter === 'bachiller') return v.estudio_realizado === 'bachiller' || v.estudio_realizado === 'primaria';
+            // 3. Profesión
+            if (filters.profesion.trim()) {
+              const profQ = filters.profesion.toLowerCase().trim();
+              if (!v.profesion || !v.profesion.toLowerCase().includes(profQ)) return false;
+            }
+
+            // 4. Zona
+            if (filters.zona !== 'todas') {
+              if (v.zona !== filters.zona) return false;
+            }
+
+            // 5. Junta Directiva (1 a 20)
+            if (filters.juntaId !== 'todas') {
+              if (String(v.junta_directiva_id) !== String(filters.juntaId)) return false;
+            }
+
+            // 6. Barrio
+            if (filters.barrioId !== 'todos') {
+              if (String(v.barrio_id) !== String(filters.barrioId)) return false;
+            }
+
+            // 7. Corregimiento (a través de vereda)
+            if (filters.corregimientoId !== 'todos') {
+              const vereda = territory.veredas.find((ver: any) => String(ver.id) === String(v.vereda_id));
+              if (!vereda || String(vereda.corregimiento_id) !== String(filters.corregimientoId)) return false;
+            }
+
+            // 8. Vereda
+            if (filters.veredaId !== 'todas') {
+              if (String(v.vereda_id) !== String(filters.veredaId)) return false;
+            }
+
+            // 9. Líder Registrador
+            if (filters.liderId !== 'todos') {
+              if (v.registrado_por !== filters.liderId) return false;
+            }
+
+            // 10. Teléfono
+            if (filters.telefono === 'con') {
+              if (!v.telefono || v.telefono.replace(/\D/g, '').length < 7) return false;
+            } else if (filters.telefono === 'sin') {
+              if (v.telefono && v.telefono.replace(/\D/g, '').length >= 7) return false;
+            }
+
             return true;
           });
+
+          // Paginación
+          const totalMatches = filteredVoters.length;
+          const totalPages = Math.max(1, Math.ceil(totalMatches / pageSize));
+          const safeCurrentPage = Math.min(currentPage, totalPages);
+          const startIndex = (safeCurrentPage - 1) * pageSize;
+          const endIndex = Math.min(startIndex + pageSize, totalMatches);
+          const paginatedVoters = filteredVoters.slice(startIndex, endIndex);
+
+          // Pastillas de Filtros Activos con opción de quitar uno a uno
+          const activeFilterPills: { key: string; label: string; onClear: () => void }[] = [];
+          if (filters.search.trim()) {
+            activeFilterPills.push({
+              key: 'search',
+              label: `Texto: "${filters.search}"`,
+              onClear: () => { setFilters((f) => ({ ...f, search: '' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.profesion.trim()) {
+            activeFilterPills.push({
+              key: 'profesion',
+              label: `Profesión: ${formatTitleCase(filters.profesion)}`,
+              onClear: () => { setFilters((f) => ({ ...f, profesion: '' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.estudio !== 'todos') {
+            activeFilterPills.push({
+              key: 'estudio',
+              label: `Estudio: ${filters.estudio}`,
+              onClear: () => { setFilters((f) => ({ ...f, estudio: 'todos' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.zona !== 'todas') {
+            activeFilterPills.push({
+              key: 'zona',
+              label: `Zona: ${filters.zona}`,
+              onClear: () => { setFilters((f) => ({ ...f, zona: 'todas' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.juntaId !== 'todas') {
+            activeFilterPills.push({
+              key: 'juntaId',
+              label: `Junta Directiva ${filters.juntaId}`,
+              onClear: () => { setFilters((f) => ({ ...f, juntaId: 'todas' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.barrioId !== 'todos') {
+            const b = territory.barrios.find((x: any) => String(x.id) === String(filters.barrioId));
+            activeFilterPills.push({
+              key: 'barrioId',
+              label: `Barrio: ${b?.nombre || filters.barrioId}`,
+              onClear: () => { setFilters((f) => ({ ...f, barrioId: 'todos' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.corregimientoId !== 'todos') {
+            const c = territory.corregimientos.find((x: any) => String(x.id) === String(filters.corregimientoId));
+            activeFilterPills.push({
+              key: 'corregimientoId',
+              label: `Corregimiento: ${c?.nombre || filters.corregimientoId}`,
+              onClear: () => { setFilters((f) => ({ ...f, corregimientoId: 'todos' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.veredaId !== 'todas') {
+            const v = territory.veredas.find((x: any) => String(x.id) === String(filters.veredaId));
+            activeFilterPills.push({
+              key: 'veredaId',
+              label: `Vereda: ${v?.nombre || filters.veredaId}`,
+              onClear: () => { setFilters((f) => ({ ...f, veredaId: 'todas' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.liderId !== 'todos') {
+            const l = systemUsers.find((x: any) => x.id === filters.liderId);
+            activeFilterPills.push({
+              key: 'liderId',
+              label: `Líder: ${l?.nombre_completo || filters.liderId}`,
+              onClear: () => { setFilters((f) => ({ ...f, liderId: 'todos' })); setCurrentPage(1); }
+            });
+          }
+          if (filters.telefono !== 'todos') {
+            activeFilterPills.push({
+              key: 'telefono',
+              label: filters.telefono === 'con' ? 'Con Celular' : 'Sin Celular',
+              onClear: () => { setFilters((f) => ({ ...f, telefono: 'todos' })); setCurrentPage(1); }
+            });
+          }
 
           return (
             <div className="space-y-4">
               {/* Encabezado del Censo y Botones de Reporte */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border border-slate-200 shadow-xs">
                 <div>
                   <h3 className="text-base font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
                     <Users className="w-5 h-5 text-[#0080FF]" /> Censo y Banco de Hojas de Vida
                   </h3>
                   <p className="text-xs text-slate-500 font-medium">
-                    {liveVoters.length} simpatizantes registrados en Turbo • {profCount} profesionales listos para convocatorias
+                    {liveVoters.length} simpatizantes registrados en Turbo • {profCount} profesionales con hoja de vida
                   </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Botón de Filtros para Móviles */}
+                  <button
+                    onClick={() => setMobileFiltersOpen(true)}
+                    className="lg:hidden px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition"
+                  >
+                    <Filter className="w-4 h-4 text-[#0080FF]" />
+                    <span>Filtros {activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}</span>
+                  </button>
+
+                  {/* Botón para alternar Sidebar en PC */}
+                  <button
+                    onClick={() => setSidebarOpen((v) => !v)}
+                    className="hidden lg:flex px-3 py-2 bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-700 rounded-xl text-xs font-bold items-center gap-1.5 transition"
+                    title={sidebarOpen ? 'Ocultar panel lateral de filtros' : 'Mostrar panel lateral de filtros'}
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-[#0080FF]" />
+                    <span>{sidebarOpen ? 'Ocultar Filtros' : `Mostrar Filtros ${activeFiltersCount > 0 ? `(${activeFiltersCount})` : ''}`}</span>
+                  </button>
+
                   <button
                     onClick={() => setPdfModalOpen(true)}
-                    className="px-3.5 py-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition border border-blue-200 shadow-xs"
+                    className="px-3 py-2 bg-blue-50 hover:bg-blue-100 active:scale-95 text-[#001E72] rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition border border-blue-200 shadow-xs"
                     title="Ver reporte oficial listo para imprimir o guardar en PDF"
                   >
                     <Printer className="w-4 h-4 text-[#0080FF]" />
@@ -1056,7 +1246,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
 
                   <button
                     onClick={exportToExcel}
-                    className="px-3.5 py-2 bg-[#3FBC24] hover:bg-[#349e1e] active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition shadow-xs"
+                    className="px-3 py-2 bg-[#3FBC24] hover:bg-[#349e1e] active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition shadow-xs"
                     title="Descargar censo completo en formato Excel"
                   >
                     <Download className="w-4 h-4" />
@@ -1065,297 +1255,386 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 </div>
               </div>
 
-              {/* Filtros de Nivel de Estudio y Buscador Inteligente por Profesión */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                {/* Pastillas de Filtro Rápido (Hojas de Vida) */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
-                  <button
-                    onClick={() => setEstudioFilter('todos')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
-                      estudioFilter === 'todos'
-                        ? 'bg-[#001E72] text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    Todos ({liveVoters.length})
-                  </button>
-                  <button
-                    onClick={() => setEstudioFilter('profesional')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
-                      estudioFilter === 'profesional'
-                        ? 'bg-[#0080FF] text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    🎓 Profesionales ({profCount})
-                  </button>
-                  <button
-                    onClick={() => setEstudioFilter('tecnico')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
-                      estudioFilter === 'tecnico'
-                        ? 'bg-[#3FBC24] text-white shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    ⚙️ Técnicos ({tecnCount})
-                  </button>
-                  <button
-                    onClick={() => setEstudioFilter('bachiller')}
-                    className={`px-3 py-1.5 rounded-xl font-bold transition shrink-0 ${
-                      estudioFilter === 'bachiller'
-                        ? 'bg-[#F4BD21] text-[#001E72] shadow-xs'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-                    }`}
-                  >
-                    📚 Bachilleres ({bachCount})
-                  </button>
-                </div>
-
-                {/* Buscador por Nombre, Cédula o Profesión */}
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
-                    <button
-                      onClick={() => setVoterViewMode('tabla')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        voterViewMode === 'tabla'
-                          ? 'bg-[#001E72] text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <span>📊 Modo CRUD</span>
-                    </button>
-                    <button
-                      onClick={() => setVoterViewMode('tarjetas')}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-                        voterViewMode === 'tarjetas'
-                          ? 'bg-[#001E72] text-white shadow-xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      <span>📱 Fichas</span>
-                    </button>
-                  </div>
-
-                  <div className="relative w-full sm:w-80">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar nombre, cédula o profesión (ej. enfermera)..."
-                      className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#0080FF] shadow-xs"
+              {/* 
+                ========================================================================
+                DISTRIBUCIÓN 2 COLUMNAS ESTILO ARISTÓTELES (SIDEBAR DE FILTROS + TABLA CRUD)
+                ========================================================================
+              */}
+              <div className="flex flex-col lg:flex-row items-start gap-4">
+                {/* 1. SIDEBAR DE FILTROS EN PC (STICKY) */}
+                {sidebarOpen && (
+                  <aside className="hidden lg:block w-80 shrink-0 sticky top-20 animate-fade-in">
+                    <VoterFilterSidebar
+                      filters={filters}
+                      onChange={(newFilters) => {
+                        setFilters(newFilters);
+                        setCurrentPage(1);
+                      }}
+                      totalMatches={filteredVoters.length}
+                      totalVoters={liveVoters.length}
+                      availableProfessions={availableProfessions}
+                      systemUsers={systemUsers}
+                      territory={territory}
+                      onCollapsePc={() => setSidebarOpen(false)}
                     />
-                  </div>
-                </div>
-              </div>
+                  </aside>
+                )}
 
-              {/* VISTA 1: TABLA CRUD PROFESIONAL ESTILO ARISTÓTELES (CON CLIC PARA ABRIR EXPEDIENTE LATERAL) */}
-              {voterViewMode === 'tabla' && (
-                <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                  <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
-                    <span>💡 Haz clic sobre cualquier fila para abrir el <strong>Expediente Completo estilo Aristóteles</strong>.</span>
-                    <span className="font-mono text-[11px] font-bold text-slate-700">{filteredVoters.length} registros</span>
+                {/* 2. MODAL DRAWER DE FILTROS EN MÓVILES */}
+                {mobileFiltersOpen && (
+                  <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fade-in lg:hidden">
+                    <div className="absolute inset-0" onClick={() => setMobileFiltersOpen(false)} />
+                    <div className="relative w-full max-w-lg z-10 animate-slide-up">
+                      <VoterFilterSidebar
+                        filters={filters}
+                        onChange={(newFilters) => {
+                          setFilters(newFilters);
+                          setCurrentPage(1);
+                        }}
+                        totalMatches={filteredVoters.length}
+                        totalVoters={liveVoters.length}
+                        availableProfessions={availableProfessions}
+                        systemUsers={systemUsers}
+                        territory={territory}
+                        onCloseMobile={() => setMobileFiltersOpen(false)}
+                        isMobileModal={true}
+                      />
+                    </div>
                   </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-[#001E72] text-white uppercase font-bold border-b border-slate-200">
-                        <tr>
-                          <th className="p-3 w-8 text-center">#</th>
-                          <th className="p-3">Cédula</th>
-                          <th className="p-3">Nombre Completo</th>
-                          <th className="p-3">Teléfono</th>
-                          <th className="p-3">Barrio / Vereda</th>
-                          <th className="p-3">Nivel de Estudio</th>
-                          <th className="p-3">Profesión u Oficio</th>
-                          <th className="p-3 text-center">Estado</th>
-                          <th className="p-3 text-right">Expediente</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 text-slate-700">
-                        {filteredVoters.length === 0 ? (
-                          <tr>
-                            <td colSpan={9} className="p-8 text-center text-slate-400">
-                              No se encontraron personas con ese filtro o profesión.
-                            </td>
-                          </tr>
-                        ) : (
-                          filteredVoters.map((v, idx) => {
-                            const isSelected = selectedVoter?.id === v.id;
-                            const formattedName = formatTitleCase(v.nombre_completo);
-                            const initials = formattedName
-                              .split(' ')
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join('')
-                              .toUpperCase();
+                )}
 
-                            return (
-                              <tr
-                                key={v.id || idx}
-                                onClick={() => {
-                                  setSelectedVoter(v);
-                                  setInspectorOpen(true);
-                                }}
-                                className={`transition cursor-pointer select-none ${
-                                  isSelected
-                                    ? 'bg-blue-50/90 ring-1 ring-[#0080FF]'
-                                    : 'hover:bg-slate-50/90'
-                                }`}
-                              >
-                                <td className="p-3 text-center font-mono text-slate-400 font-bold">
-                                  {idx + 1}
+                {/* 3. CONTENIDO CENTRAL: TABLA CRUD Y PAGINACIÓN */}
+                <div className="flex-1 min-w-0 w-full space-y-3">
+                  {/* Barra de Controles: Switch de Vista y Conteo */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex rounded-xl bg-slate-100 p-1 border border-slate-200 shrink-0">
+                        <button
+                          onClick={() => setVoterViewMode('tabla')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                            voterViewMode === 'tabla'
+                              ? 'bg-[#001E72] text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <span>📊 Modo CRUD</span>
+                        </button>
+                        <button
+                          onClick={() => setVoterViewMode('tarjetas')}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                            voterViewMode === 'tarjetas'
+                              ? 'bg-[#001E72] text-white shadow-xs'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          <span>📱 Fichas</span>
+                        </button>
+                      </div>
+
+                      <span className="text-xs font-bold text-slate-700">
+                        {totalMatches} personas filtradas
+                      </span>
+                    </div>
+
+                    {/* Selector de Paginación Rápida */}
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span>Página <strong>{safeCurrentPage}</strong> de <strong>{totalPages}</strong></span>
+                    </div>
+                  </div>
+
+                  {/* Pastillas de Filtros Activos (Clicables para Quitar) */}
+                  {activeFilterPills.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5 p-2 bg-blue-50/60 rounded-xl border border-blue-100 animate-fade-in">
+                      <span className="text-[11px] font-black uppercase text-[#001E72] mr-1">Filtros:</span>
+                      {activeFilterPills.map((pill) => (
+                        <button
+                          key={pill.key}
+                          type="button"
+                          onClick={pill.onClear}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold bg-white text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200 hover:border-red-300 hover:text-red-600 shadow-2xs transition"
+                          title="Clic para remover este filtro"
+                        >
+                          <span>{pill.label}</span>
+                          <X className="w-3 h-3 text-slate-400 group-hover:text-red-500" />
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFilters(initialFilterState);
+                          setCurrentPage(1);
+                        }}
+                        className="text-[11px] font-bold text-red-600 hover:underline ml-1"
+                      >
+                        Limpiar todos
+                      </button>
+                    </div>
+                  )}
+
+                  {/* VISTA 1: TABLA CRUD PROFESIONAL ESTILO ARISTÓTELES (PAGINADA) */}
+                  {voterViewMode === 'tabla' && (
+                    <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                      <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs text-slate-500">
+                        <span>💡 Haz clic sobre cualquier fila para abrir el <strong>Expediente Lateral (Aristóteles)</strong>.</span>
+                        <span className="font-mono text-[11px] font-bold text-slate-700">
+                          {paginatedVoters.length} en pantalla
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-xs">
+                          <thead className="bg-[#001E72] text-white uppercase font-bold border-b border-slate-200">
+                            <tr>
+                              <th className="p-3 w-8 text-center">#</th>
+                              <th className="p-3">Cédula</th>
+                              <th className="p-3">Nombre Completo</th>
+                              <th className="p-3">Teléfono</th>
+                              <th className="p-3">Barrio / Vereda</th>
+                              <th className="p-3">Nivel de Estudio</th>
+                              <th className="p-3">Profesión u Oficio</th>
+                              <th className="p-3 text-center">Estado</th>
+                              <th className="p-3 text-right">Expediente</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-700">
+                            {paginatedVoters.length === 0 ? (
+                              <tr>
+                                <td colSpan={9} className="p-8 text-center text-slate-400">
+                                  No se encontraron simpatizantes con los filtros seleccionados.
                                 </td>
-                                <td className="p-3 font-mono font-bold text-slate-900">
-                                  {v.documento}
-                                </td>
-                                <td className="p-3 font-bold text-slate-900">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-md bg-[#001E72] text-white flex items-center justify-center font-black text-[9px] shrink-0">
-                                      {initials}
-                                    </div>
-                                    <span className="truncate">{formattedName}</span>
-                                  </div>
-                                </td>
-                                <td className="p-3 text-slate-800 font-mono">
-                                  <a
-                                    href={`tel:${v.telefono}`}
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="hover:text-[#0080FF] inline-flex items-center gap-1 font-semibold"
-                                  >
-                                    <Phone className="w-3 h-3 text-[#0080FF]" /> {v.telefono}
-                                  </a>
-                                </td>
-                                <td className="p-3 text-slate-600">
-                                  {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
-                                </td>
-                                <td className="p-3 capitalize text-slate-600 font-medium">
-                                  {v.estudio_realizado || 'Bachiller'}
-                                </td>
-                                <td className="p-3">
-                                  {v.profesion ? (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0080FF] font-bold rounded-md border border-blue-200 text-[11px]">
-                                      <Briefcase className="w-3 h-3 shrink-0" /> {formatTitleCase(v.profesion)}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400 italic text-[11px]">—</span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-center">
-                                  {v._synced !== false ? (
-                                    <span className="text-[10px] text-[#166534] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
-                                      En Nube
-                                    </span>
-                                  ) : (
-                                    <span className="text-[10px] text-[#854d0e] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-bold">
-                                      En Celular
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="p-3 text-right">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
+                              </tr>
+                            ) : (
+                              paginatedVoters.map((v, idx) => {
+                                const isSelected = selectedVoter?.id === v.id;
+                                const formattedName = formatTitleCase(v.nombre_completo);
+                                const initials = formattedName
+                                  .split(' ')
+                                  .map((n) => n[0])
+                                  .slice(0, 2)
+                                  .join('')
+                                  .toUpperCase();
+
+                                return (
+                                  <tr
+                                    key={v.id || idx}
+                                    onClick={() => {
                                       setSelectedVoter(v);
                                       setInspectorOpen(true);
                                     }}
-                                    className="px-2.5 py-1 bg-[#0080FF]/10 hover:bg-[#0080FF] hover:text-white text-[#0080FF] rounded-lg font-black text-[10px] uppercase tracking-wider transition"
+                                    className={`transition cursor-pointer select-none ${
+                                      isSelected
+                                        ? 'bg-blue-50/90 ring-1 ring-[#0080FF]'
+                                        : 'hover:bg-slate-50/90'
+                                    }`}
                                   >
-                                    Ficha →
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* VISTA 2: FICHAS MÓVILES (Estilo Aristotle Phone Card con Botón de Expediente) */}
-              {voterViewMode === 'tarjetas' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-                  {filteredVoters.length === 0 ? (
-                    <div className="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
-                      No se encontraron personas con ese filtro o profesión.
+                                    <td className="p-3 text-center font-mono text-slate-400 font-bold">
+                                      {startIndex + idx + 1}
+                                    </td>
+                                    <td className="p-3 font-mono font-bold text-slate-900">
+                                      {v.documento}
+                                    </td>
+                                    <td className="p-3 font-bold text-slate-900">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-md bg-[#001E72] text-white flex items-center justify-center font-black text-[9px] shrink-0">
+                                          {initials}
+                                        </div>
+                                        <span className="truncate">{formattedName}</span>
+                                      </div>
+                                    </td>
+                                    <td className="p-3 text-slate-800 font-mono">
+                                      <a
+                                        href={`tel:${v.telefono}`}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="hover:text-[#0080FF] inline-flex items-center gap-1 font-semibold"
+                                      >
+                                        <Phone className="w-3 h-3 text-[#0080FF]" /> {v.telefono}
+                                      </a>
+                                    </td>
+                                    <td className="p-3 text-slate-600">
+                                      {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
+                                    </td>
+                                    <td className="p-3 capitalize text-slate-600 font-medium">
+                                      {v.estudio_realizado || 'Bachiller'}
+                                    </td>
+                                    <td className="p-3">
+                                      {v.profesion ? (
+                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-[#0080FF] font-bold rounded-md border border-blue-200 text-[11px]">
+                                          <Briefcase className="w-3 h-3 shrink-0" /> {formatTitleCase(v.profesion)}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-400 italic text-[11px]">—</span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 text-center">
+                                      {v._synced !== false ? (
+                                        <span className="text-[10px] text-[#166534] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                                          En Nube
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] text-[#854d0e] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 font-bold">
+                                          En Celular
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="p-3 text-right">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedVoter(v);
+                                          setInspectorOpen(true);
+                                        }}
+                                        className="px-2.5 py-1 bg-[#0080FF]/10 hover:bg-[#0080FF] hover:text-white text-[#0080FF] rounded-lg font-black text-[10px] uppercase tracking-wider transition"
+                                      >
+                                        Ficha →
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
-                  ) : (
-                    filteredVoters.map((v) => {
-                      const formattedName = formatTitleCase(v.nombre_completo);
-                      const initials = formattedName
-                        .split(' ')
-                        .map((n) => n[0])
-                        .slice(0, 2)
-                        .join('')
-                        .toUpperCase();
-                      const cleanTel = v.telefono.replace(/\D/g, '');
-                      const telWhatsApp = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
+                  )}
 
-                      return (
-                        <div
-                          key={v.id}
-                          className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition space-y-3"
-                        >
-                          <div className="flex items-start gap-3">
-                            <div className="w-11 h-11 rounded-2xl bg-[#001E72] text-white flex items-center justify-center font-black text-sm shadow-md shrink-0 border-b-2 border-[#F4BD21]">
-                              {initials}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-bold text-slate-900 text-sm truncate">{formattedName}</h4>
-                              <p className="text-xs text-slate-500 font-mono">CC: {v.documento}</p>
-                              <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                                  📍 {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
-                                </span>
-                                {v.profesion && (
-                                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-[#0080FF] border border-blue-100">
-                                    💼 {formatTitleCase(v.profesion)}
-                                  </span>
-                                )}
+                  {/* VISTA 2: FICHAS MÓVILES (PAGINADAS) */}
+                  {voterViewMode === 'tarjetas' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {paginatedVoters.length === 0 ? (
+                        <div className="col-span-full p-8 text-center bg-white rounded-2xl border border-slate-200 text-slate-400 text-sm">
+                          No se encontraron simpatizantes con los filtros seleccionados.
+                        </div>
+                      ) : (
+                        paginatedVoters.map((v) => {
+                          const formattedName = formatTitleCase(v.nombre_completo);
+                          const initials = formattedName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase();
+                          const cleanTel = v.telefono.replace(/\D/g, '');
+                          const telWhatsApp = cleanTel.startsWith('57') ? cleanTel : `57${cleanTel}`;
+
+                          return (
+                            <div
+                              key={v.id}
+                              className="bg-white border border-slate-200 rounded-2xl p-4 shadow-xs hover:shadow-md transition space-y-3"
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-[#001E72] text-white flex items-center justify-center font-black text-sm shadow-md shrink-0 border-b-2 border-[#F4BD21]">
+                                  {initials}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-bold text-slate-900 text-sm truncate">{formattedName}</h4>
+                                  <p className="text-xs text-slate-500 font-mono">CC: {v.documento}</p>
+                                  <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                      📍 {v.barrio_nombre || v.vereda_nombre || (v.barrio_id ? `Barrio ${v.barrio_id}` : 'Turbo')}
+                                    </span>
+                                    {v.profesion && (
+                                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-[#0080FF] border border-blue-100">
+                                        💼 {formatTitleCase(v.profesion)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1.5 pt-1 border-t border-slate-100">
+                                <div className="flex items-center gap-2">
+                                  <a
+                                    href={`tel:${v.telefono}`}
+                                    className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                                  >
+                                    <Phone className="w-3.5 h-3.5 text-[#0080FF]" />
+                                    <span>Llamar</span>
+                                  </a>
+                                  <a
+                                    href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
+                                      `Hola ${formattedName}, te saludamos de la campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 py-2 px-3 rounded-xl bg-[#3FBC24]/15 hover:bg-[#3FBC24]/25 text-[#2f961a] font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
+                                  >
+                                    <Send className="w-3.5 h-3.5" />
+                                    <span>WhatsApp</span>
+                                  </a>
+                                </div>
+
+                                <button
+                                  onClick={() => {
+                                    setSelectedVoter(v);
+                                    setInspectorOpen(true);
+                                  }}
+                                  className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-[#001E72] font-black text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95"
+                                >
+                                  <span>Ver Expediente Completo (Aristóteles) →</span>
+                                </button>
                               </div>
                             </div>
-                          </div>
-
-                          {/* Botones de Contacto Rápido: Llamar, WhatsApp Campaña y Ver Ficha */}
-                          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                            <div className="flex items-center gap-2">
-                              <a
-                                href={`tel:${v.telefono}`}
-                                className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                              >
-                                <Phone className="w-3.5 h-3.5 text-[#0080FF]" />
-                                <span>Llamar</span>
-                              </a>
-                              <a
-                                href={`https://api.whatsapp.com/send?phone=${telWhatsApp}&text=${encodeURIComponent(
-                                  `Hola ${formattedName}, te saludamos de la campaña de Janier Lloreda (SOMOS NUEVAS ACCIONES).`
-                                )}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 py-2 px-3 rounded-xl bg-[#3FBC24]/15 hover:bg-[#3FBC24]/25 text-[#2f961a] font-bold text-xs flex items-center justify-center gap-1.5 transition active:scale-95"
-                              >
-                                <Send className="w-3.5 h-3.5" />
-                                <span>WhatsApp</span>
-                              </a>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                setSelectedVoter(v);
-                                setInspectorOpen(true);
-                              }}
-                              className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-blue-50 text-[#001E72] font-black text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition active:scale-95"
-                            >
-                              <span>Ver Expediente Completo (Aristóteles) →</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })
+                          );
+                        })
+                      )}
+                    </div>
                   )}
+
+                  {/* BARRA DE PAGINACIÓN ESTILO ARISTÓTELES */}
+                  <div className="bg-white border border-slate-200 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-xs">
+                    <div className="flex items-center gap-3 text-slate-500 font-semibold">
+                      <span>
+                        Mostrando <strong className="text-slate-900">{totalMatches === 0 ? 0 : startIndex + 1}</strong> a{' '}
+                        <strong className="text-slate-900">{endIndex}</strong> de{' '}
+                        <strong className="text-slate-900">{totalMatches}</strong> simpatizantes
+                      </span>
+
+                      <div className="flex items-center gap-1.5 pl-2 border-l border-slate-200">
+                        <span className="text-slate-400">Ver:</span>
+                        <select
+                          value={pageSize}
+                          onChange={(e) => {
+                            setPageSize(Number(e.target.value));
+                            setCurrentPage(1);
+                          }}
+                          className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 font-bold text-slate-800 focus:outline-none"
+                        >
+                          <option value={10}>10</option>
+                          <option value={25}>25</option>
+                          <option value={50}>50</option>
+                          <option value={100}>100</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={safeCurrentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                      >
+                        <ChevronLeft className="w-3.5 h-3.5" />
+                        <span>Anterior</span>
+                      </button>
+
+                      <span className="px-2 font-mono font-bold text-slate-700">
+                        {safeCurrentPage} / {totalPages}
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={safeCurrentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        className="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1"
+                      >
+                        <span>Siguiente</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })()}
