@@ -196,30 +196,6 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
         <form onSubmit={handleSubmit} className={`overflow-y-auto flex-1 transition-all duration-300 ${
           isFormExpanded ? 'p-5 sm:p-6 space-y-5 bg-white' : 'p-5 space-y-4'
         }`}>
-          {/* Banner de Modo Enfoque Ampliado */}
-          {isFormExpanded && (
-            <div className="flex items-center justify-between pb-3 border-b border-blue-100 bg-blue-50/70 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 p-4 rounded-t-none animate-fade-in">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#3FBC24] animate-pulse shrink-0" />
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-[#001E72] block">
-                    Modo Enfoque • Letra Grande
-                  </span>
-                  <span className="text-[11px] text-slate-500 font-medium">
-                    Campos ampliados para lectura fácil
-                  </span>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsFormExpanded(false)}
-                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-xs font-black rounded-xl border border-slate-200 shadow-xs transition active:scale-95"
-              >
-                Contraer ✕
-              </button>
-            </div>
-          )}
-
           {submitSuccess && (
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#3FBC24] flex items-center gap-2.5 shadow-sm">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
