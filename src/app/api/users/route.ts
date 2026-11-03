@@ -123,16 +123,22 @@ export async function POST(req: Request) {
   }
 }
 
-// PATCH: Dar de alta o baja a un usuario (is_active)
+// PATCH: Actualizar usuario (estado is_active, telefono, nombre_completo)
 export async function PATCH(req: Request) {
   try {
-    const { id, is_active } = await req.json();
+    const body = await req.json();
+    const { id, is_active, telefono, nombre_completo } = body;
 
-    if (!id || is_active === undefined) {
-      return NextResponse.json({ error: 'ID y estado son requeridos.' }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ error: 'ID de usuario es requerido.' }, { status: 400 });
     }
 
-    const endpoint = `${SUPABASE_URL}/rest/v1/usuarios_sistema?id=eq.${encodeURIComponent(id)}&rol=neq.gerente_general`;
+    const updatePayload: any = {};
+    if (is_active !== undefined) updatePayload.is_active = is_active;
+    if (telefono !== undefined) updatePayload.telefono = telefono.trim();
+    if (nombre_completo !== undefined) updatePayload.nombre_completo = formatTitleCase(nombre_completo);
+
+    const endpoint = `${SUPABASE_URL}/rest/v1/usuarios_sistema?id=eq.${encodeURIComponent(id)}`;
     const res = await fetch(endpoint, {
       method: 'PATCH',
       headers: {
@@ -141,7 +147,7 @@ export async function PATCH(req: Request) {
         'Content-Type': 'application/json',
         'Prefer': 'return=representation',
       },
-      body: JSON.stringify({ is_active }),
+      body: JSON.stringify(updatePayload),
     });
 
     if (!res.ok) {

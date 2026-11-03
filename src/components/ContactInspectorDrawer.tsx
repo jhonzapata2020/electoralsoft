@@ -150,7 +150,7 @@ export default function ContactInspectorDrawer({
         <div className="bg-[#001E72] px-5 py-4 text-white flex items-center justify-between border-b border-white/10 shrink-0">
           <div className="min-w-0 pr-2">
             <span className="text-[10px] font-black tracking-widest text-[#F4BD21] uppercase block">
-              {isEditing ? 'EDITAR CONTACTO' : 'EXPEDIENTE DE CONTACTO'} • ARISTÓTELES
+              {isEditing ? 'EDITAR CAMPOS' : 'EXPEDIENTE DE CONTACTO'} • ARISTÓTELES
             </span>
             <h3 className="text-base font-black truncate text-white">
               {formattedName}
@@ -166,7 +166,7 @@ export default function ContactInspectorDrawer({
                 title="Editar teléfono o datos del votante"
               >
                 <Pencil className="w-3.5 h-3.5 text-[#F4BD21]" />
-                <span className="hidden sm:inline">Editar</span>
+                <span className="hidden sm:inline">Editar Campos</span>
               </button>
             )}
 
@@ -190,10 +190,10 @@ export default function ContactInspectorDrawer({
               <Pencil className="w-5 h-5 text-[#0080FF] shrink-0 mt-0.5" />
               <div>
                 <h4 className="text-xs font-black text-[#001E72] uppercase">
-                  Actualización de Datos (Control Admin)
+                  Edición de Registro (Control Admin)
                 </h4>
                 <p className="text-[11px] text-slate-600 font-medium mt-0.5">
-                  Puedes corregir el teléfono si llamaron o se equivocaron digitándolo. Los cambios se sincronizan en la nube.
+                  Modifica cualquier campo: nombre, teléfono celular, nivel de estudios, profesión o barrio/vereda. Los cambios se sincronizan en la nube.
                 </p>
               </div>
             </div>
@@ -407,7 +407,7 @@ export default function ContactInspectorDrawer({
                   onClick={() => setIsEditing(true)}
                   className="text-[11px] font-bold text-[#0080FF] hover:underline flex items-center gap-1"
                 >
-                  <Pencil className="w-3 h-3" /> Corregir Teléfono
+                  <Pencil className="w-3 h-3" /> Editar Campos
                 </button>
               </div>
               
@@ -533,7 +533,7 @@ export default function ContactInspectorDrawer({
               className="flex-1 py-2.5 bg-[#001E72] hover:bg-[#001655] text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-md"
             >
               <Pencil className="w-3.5 h-3.5 text-[#F4BD21]" />
-              <span>Editar Datos / Teléfono</span>
+              <span>Editar Campos</span>
             </button>
             <button
               onClick={onClose}
