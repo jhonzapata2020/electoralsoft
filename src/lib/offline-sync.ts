@@ -228,6 +228,40 @@ export async function registerVoter(voterData: Omit<Votante, 'id' | 'created_at'
   }
 }
 
+// Actualizar datos de un votante existente (ej. corrección de teléfono, nombre o territorio)
+export async function updateVoter(
+  voterData: Partial<Votante> & { id?: string; documento?: string }
+): Promise<{ success: boolean; voter?: Votante; error?: string }> {
+  try {
+    const res = await fetch('/api/voters', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(voterData),
+    });
+
+    const result = await res.json();
+    if (!res.ok) {
+      return { success: false, error: result.error || 'Error al actualizar votante' };
+    }
+
+    const updated = result.voter;
+    // Actualizar cache local
+    if (updated) {
+      const cache = getStorage<Votante[]>(STORAGE_KEYS.VOTERS_CACHE, []);
+      const newCache = cache.map((v) =>
+        (voterData.id && v.id === voterData.id) || (voterData.documento && v.documento === voterData.documento)
+          ? { ...v, ...updated }
+          : v
+      );
+      setStorage(STORAGE_KEYS.VOTERS_CACHE, newCache);
+    }
+
+    return { success: true, voter: updated };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Error de conexión' };
+  }
+}
+
 // --- Proceso de Sincronización Automática de Registros Acumulados ---
 let isSyncing = false;
 

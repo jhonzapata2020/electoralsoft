@@ -35,7 +35,8 @@ import {
   X,
   RotateCcw,
   Sparkles,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Pencil
 } from 'lucide-react';
 import VoterFilterSidebar, {
   VoterFilterState,
@@ -1476,16 +1477,20 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                       )}
                                     </td>
                                     <td className="p-3 text-right">
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setSelectedVoter(v);
-                                          setInspectorOpen(true);
-                                        }}
-                                        className="px-2.5 py-1 bg-[#0080FF]/10 hover:bg-[#0080FF] hover:text-white text-[#0080FF] rounded-lg font-black text-[10px] uppercase tracking-wider transition"
-                                      >
-                                        Ficha →
-                                      </button>
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedVoter(v);
+                                            setInspectorOpen(true);
+                                          }}
+                                          className="px-2.5 py-1 bg-slate-100 hover:bg-[#001E72] hover:text-white text-slate-800 rounded-lg font-black text-[10px] uppercase tracking-wider transition flex items-center gap-1 shadow-2xs"
+                                          title="Ver expediente o editar teléfono / datos"
+                                        >
+                                          <Pencil className="w-3 h-3 text-[#0080FF]" />
+                                          <span>Editar / Ficha</span>
+                                        </button>
+                                      </div>
                                     </td>
                                   </tr>
                                 );
@@ -1838,11 +1843,17 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
         onExportExcel={exportToExcel}
       />
 
-      {/* Inspector Lateral de Simpatizante (Estilo Aristotle Contacts Inspector) */}
+      {/* Inspector Lateral de Simpatizante (Estilo Aristotle Contacts Inspector con Edición) */}
       <ContactInspectorDrawer
         voter={selectedVoter}
         isOpen={inspectorOpen}
         onClose={() => setInspectorOpen(false)}
+        onVoterUpdated={(updated) => {
+          setLiveVoters((prev) =>
+            prev.map((v) => (v.id === updated.id || v.documento === updated.documento ? { ...v, ...updated } : v))
+          );
+          setSelectedVoter(updated);
+        }}
       />
 
       {/* 

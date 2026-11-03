@@ -133,3 +133,88 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: err.message || 'Error al guardar votante' }, { status: 500 });
   }
 }
+
+// PATCH: Actualizar datos de un votante existente (ej. corregir teléfono, nombre, profesión, territorio)
+export async function PATCH(req: Request) {
+  try {
+    const body = await req.json();
+    const {
+      id,
+      documento,
+      nombre_completo,
+      telefono,
+      estudio_realizado,
+      profesion,
+      correo,
+      barrio_id,
+      vereda_id,
+      junta_directiva_id,
+      zona,
+      barrio_nombre,
+      vereda_nombre,
+    } = body;
+
+    if (!id && !documento) {
+      return NextResponse.json({ error: 'Se requiere ID o Documento para actualizar.' }, { status: 400 });
+    }
+
+    const formattedName = nombre_completo ? formatTitleCase(nombre_completo) : undefined;
+    const formattedProf = profesion && profesion.trim() ? formatTitleCase(profesion) : null;
+    let correoFinal = correo || '';
+    if (formattedProf) {
+      correoFinal = correoFinal ? `prof:${formattedProf} | ${correoFinal}` : `prof:${formattedProf}`;
+    }
+
+    const updatePayload: any = {};
+    if (formattedName !== undefined) updatePayload.nombre_completo = formattedName;
+    if (telefono !== undefined) updatePayload.telefono = telefono.trim();
+    if (estudio_realizado !== undefined) updatePayload.estudio_realizado = estudio_realizado;
+    if (profesion !== undefined || correo !== undefined) updatePayload.correo = correoFinal || null;
+    if (barrio_id !== undefined) updatePayload.barrio_id = barrio_id || null;
+    if (vereda_id !== undefined) updatePayload.vereda_id = vereda_id || null;
+    if (junta_directiva_id !== undefined) updatePayload.junta_directiva_id = junta_directiva_id || null;
+    if (zona !== undefined) updatePayload.zona = zona;
+
+    const filterParam = id ? `id=eq.${encodeURIComponent(id)}` : `documento=eq.${encodeURIComponent(documento)}`;
+    const endpoint = `${SUPABASE_URL}/rest/v1/votantes?${filterParam}`;
+
+    const res = await fetch(endpoint, {
+      method: 'PATCH',
+      headers: {
+        'apikey': SECRET_KEY,
+        'Authorization': `Bearer ${SECRET_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation',
+      },
+      body: JSON.stringify(updatePayload),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      return NextResponse.json({ error: errText }, { status: res.status });
+    }
+
+    const data = await res.json();
+    const rawUpdated = data && data.length > 0 ? data[0] : null;
+
+    if (!rawUpdated) {
+      return NextResponse.json({ error: 'No se encontró el registro para actualizar.' }, { status: 404 });
+    }
+
+    const updatedVoter = {
+      ...rawUpdated,
+      nombre_completo: formatTitleCase(rawUpdated.nombre_completo),
+      profesion: formattedProf,
+      barrio_nombre: barrio_nombre || rawUpdated.barrio_nombre,
+      vereda_nombre: vereda_nombre || rawUpdated.vereda_nombre,
+    };
+
+    return NextResponse.json({
+      success: true,
+      message: 'Votante actualizado correctamente',
+      voter: updatedVoter,
+    });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message || 'Error al actualizar votante' }, { status: 500 });
+  }
+}
