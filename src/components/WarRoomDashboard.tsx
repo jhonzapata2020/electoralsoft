@@ -544,7 +544,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
             {/* ================================================================= */}
             {/* COLUMNA CENTRAL (8/12): GRÁFICA ELEGANTE CON LÍNEAS FINAS        */}
             {/* ================================================================= */}
-            <div className="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 shadow-sm space-y-4">
+            <div className="lg:col-span-8 bg-white border border-slate-200/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-sm space-y-3.5 overflow-hidden">
               
               {/* Header del Gráfico con Título y Filtros Compactos */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
@@ -608,74 +608,95 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 </div>
               </div>
 
-              {/* Área del Gráfico con Barras Finas y Escala Estilo Aristotle */}
+              {/* Área del Gráfico con Barras Finas y Escala Estilo Aristotle (Responsive y con Scroll Táctil) */}
               <div className="pt-2">
-                <div className="h-56 sm:h-64 w-full flex items-end justify-between gap-3 sm:gap-6 relative border-b border-slate-200 px-3">
-                  
-                  {/* Líneas horizontales de guía ultra-sutiles estilo Aristotle */}
-                  <div className="absolute inset-x-0 top-1/4 border-b border-slate-100 pointer-events-none" />
-                  <div className="absolute inset-x-0 top-2/4 border-b border-slate-100 pointer-events-none" />
-                  <div className="absolute inset-x-0 top-3/4 border-b border-slate-100 pointer-events-none" />
+                {/* Indicador táctil en celular para que sepan que pueden deslizar suavemente */}
+                <div className="flex sm:hidden items-center justify-between text-[11px] text-slate-500 font-semibold mb-2 px-1 bg-slate-50 border border-slate-200/60 rounded-lg py-1">
+                  <span className="flex items-center gap-1.5 text-[#0080FF]">
+                    <span className="text-xs">↔</span> Desliza con el dedo para ver las {chartItems.length} {chartFilter === 'juntas' ? 'Juntas' : 'Equipos'}
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">1-{chartItems.length}</span>
+                </div>
 
-                  {/* Barras Elegantes con ancho controlado */}
-                  {chartItems.map((item: any, idx: number) => {
-                    const barPercent = Math.min(100, Math.max(6, Math.round(((item.votos || 0) / chartMaxVal) * 100)));
-                    const isHigh = chartFilter === 'top_barrios' && idx < 2;
-                    const isWarning = chartFilter === 'reforzar' && (item.votos || 0) === 0;
+                {/* Contenedor deslizable suave con touch-action pan-x que NUNCA desborda la pantalla */}
+                <div className="overflow-x-auto pb-3 pt-1 scrollbar-thin touch-pan-x -mx-2 px-2 sm:mx-0 sm:px-0">
+                  <div
+                    className="h-56 sm:h-64 flex items-end justify-between relative border-b border-slate-200 px-3"
+                    style={{
+                      minWidth: chartItems.length > 8 ? `${Math.max(680, chartItems.length * 44)}px` : '100%',
+                      width: chartItems.length > 8 ? `${Math.max(680, chartItems.length * 44)}px` : '100%',
+                    }}
+                  >
+                    {/* Líneas horizontales de guía ultra-sutiles estilo Aristotle */}
+                    <div className="absolute inset-x-0 top-1/4 border-b border-slate-100 pointer-events-none" />
+                    <div className="absolute inset-x-0 top-2/4 border-b border-slate-100 pointer-events-none" />
+                    <div className="absolute inset-x-0 top-3/4 border-b border-slate-100 pointer-events-none" />
 
-                    return (
-                      <div
-                        key={item.id || idx}
-                        className="flex-1 flex flex-col items-center h-full justify-end group relative max-w-[48px]"
-                      >
-                        {/* Número sobre la barra */}
-                        <div className="mb-1.5 transition">
-                          <span className="text-[11px] font-semibold text-slate-700">
-                            {item.votos || 0}
-                          </span>
-                        </div>
+                    {/* Barras Elegantes con ancho controlado */}
+                    {chartItems.map((item: any, idx: number) => {
+                      const barPercent = Math.min(100, Math.max(6, Math.round(((item.votos || 0) / chartMaxVal) * 100)));
+                      const isHigh = chartFilter === 'top_barrios' && idx < 2;
+                      const isWarning = chartFilter === 'reforzar' && (item.votos || 0) === 0;
 
-                        {/* La Barra Pulida y Fina con Paleta Oficial (Verde éxito, Amarillo alerta, Azul Somos) */}
+                      return (
                         <div
-                          className={`w-full max-w-[28px] sm:max-w-[32px] rounded-t-sm transition-all duration-300 ${
-                            isWarning
-                              ? 'bg-[#F4BD21]'
-                              : isHigh
-                              ? 'bg-[#3FBC24]'
-                              : 'bg-[#0080FF]'
-                          }`}
-                          style={{ height: `${barPercent}%` }}
-                        />
+                          key={item.id || idx}
+                          className="flex flex-col items-center h-full justify-end group relative shrink-0"
+                          style={{
+                            width: chartItems.length > 8 ? `${Math.max(38, Math.floor(100 / chartItems.length))}%` : `${Math.floor(100 / chartItems.length)}%`,
+                            maxWidth: '48px',
+                            minWidth: '36px',
+                          }}
+                        >
+                          {/* Número sobre la barra */}
+                          <div className="mb-1.5 transition">
+                            <span className="text-[11px] font-bold text-slate-700 font-mono">
+                              {item.votos || 0}
+                            </span>
+                          </div>
 
-                        {/* Etiqueta del Eje X limpia */}
-                        <div className="mt-2 text-center w-full">
-                          <span 
-                            className="text-[10px] sm:text-[11px] font-medium text-slate-700 block truncate"
-                            title={item.nombre}
-                          >
-                            {item.nombre.replace('Equipo Operativo ', 'Eq ')}
-                          </span>
+                          {/* La Barra Pulida y Fina con Paleta Oficial (Verde éxito, Amarillo alerta, Azul Somos) */}
+                          <div
+                            className={`w-5 sm:w-6 rounded-t-sm transition-all duration-300 shadow-2xs ${
+                              isWarning
+                                ? 'bg-[#F4BD21]'
+                                : isHigh
+                                ? 'bg-[#3FBC24]'
+                                : 'bg-[#0080FF]'
+                            }`}
+                            style={{ height: `${barPercent}%` }}
+                          />
+
+                          {/* Etiqueta del Eje X limpia sin montarse */}
+                          <div className="mt-2 text-center w-full px-0.5">
+                            <span 
+                              className="text-[10px] sm:text-[11px] font-bold text-slate-600 block truncate"
+                              title={item.nombre}
+                            >
+                              {item.nombre.replace('Junta Directiva ', 'JD ').replace('Equipo Operativo ', 'Eq ')}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
-              {/* Leyenda al pie con Paleta Oficial */}
-              <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
-                <span>Total sectores analizados: {chartItems.length}</span>
-                <span className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#3FBC24]" /> Destacados
+              {/* Leyenda al pie con Paleta Oficial organizada y responsive */}
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500 pt-2 border-t border-slate-100">
+                <span className="font-semibold text-slate-700">Total sectores: {chartItems.length}</span>
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <span className="w-2.5 h-2.5 rounded-xs bg-[#3FBC24]" /> Destacados
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#0080FF]" /> Censo Activo
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <span className="w-2.5 h-2.5 rounded-xs bg-[#0080FF]" /> Censo Activo
                   </span>
-                  <span className="flex items-center gap-1">
-                    <span className="w-2.5 h-2.5 rounded-sm bg-[#F4BD21]" /> Por Reforzar
+                  <span className="inline-flex items-center gap-1 font-medium">
+                    <span className="w-2.5 h-2.5 rounded-xs bg-[#F4BD21]" /> Por Reforzar
                   </span>
-                </span>
+                </div>
               </div>
             </div>
 
