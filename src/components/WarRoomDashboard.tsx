@@ -512,80 +512,80 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
           {/* TARJETAS ESTILO ARISTÓTELES: 1 COLUMNA EN MÓVIL (ESPACIOSAS Y LEGIBLES), 4 EN COMPUTADOR */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 items-stretch">
             
-            {/* Tarjeta 1: Censo Registrado (Verde Aristóteles) */}
-            <div className="bg-[#f0fdf4] border border-[#3FBC24]/50 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 1: Censo Registrado (Celeste Aristóteles #E0F2FE con borde #38BDF8) */}
+            <div className="bg-[#E0F2FE] border-2 border-[#38BDF8] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                  <span className="text-xs font-black text-[#0369A1] tracking-wider uppercase">
                     Censo Registrado
                   </span>
-                  <span className="text-[10px] font-black bg-[#3FBC24]/20 text-[#166534] px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-black bg-[#0284C7] text-white px-2 py-0.5 rounded-md shadow-xs">
                     META 20.000
                   </span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-black text-slate-900 mt-0.5">
+                <div className="text-2xl sm:text-3xl font-black text-slate-950 mt-1">
                   {totalVotos.toLocaleString()}{' '}
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-bold text-[#0369A1]">
                     simpatizantes ({porcentajeVictoria}%)
                   </span>
                 </div>
               </div>
-              <div className="text-xs text-[#166534] font-bold pt-2 border-t border-[#3FBC24]/20 mt-2 flex items-center justify-between">
-                <span>Zona Urbana: <strong>{votosUrbanos}</strong></span>
+              <div className="text-xs text-[#0369A1] font-bold pt-2 border-t border-[#38BDF8]/40 mt-2.5 flex items-center justify-between">
+                <span>Urbana: <strong>{votosUrbanos}</strong></span>
                 <span>•</span>
                 <span>Corregimientos: <strong>{votosRurales}</strong></span>
               </div>
             </div>
 
-            {/* Tarjeta 2: Barrio Líder (Amarillo Aristóteles) */}
-            <div className="bg-[#fffbeb] border border-[#F4BD21] rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 2: Barrio Líder (Durazno / Peach Aristóteles #FFEDD5 con borde #FB923C) */}
+            <div className="bg-[#FFEDD5] border-2 border-[#FB923C] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                  <span className="text-xs font-black text-[#9A3412] tracking-wider uppercase">
                     Barrio Líder
                   </span>
-                  <span className="text-[10px] font-black bg-[#F4BD21]/30 text-[#854d0e] px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-black bg-[#EA580C] text-white px-2 py-0.5 rounded-md shadow-xs">
                     FUERZA #1
                   </span>
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 mt-0.5 truncate" title={barrioLider.nombre}>
+                <div className="text-xl sm:text-2xl font-black text-slate-950 mt-1 truncate" title={barrioLider.nombre}>
                   {barrioLider.nombre}
                 </div>
               </div>
-              <div className="text-xs text-[#854d0e] font-bold pt-2 border-t border-[#F4BD21]/30 mt-2">
+              <div className="text-xs text-[#9A3412] font-bold pt-2 border-t border-[#FB923C]/40 mt-2.5">
                 {barrioLider.votos} simpatizantes confirmados
               </div>
             </div>
 
-            {/* Tarjeta 3: Cobertura de Barrios y Por Reforzar (Azul Institucional Aristóteles) */}
-            <div className="bg-[#f8fafc] border border-[#001E72]/40 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 3: Cobertura de Barrios (Amarillo Oro Aristóteles #FEF9C3 con borde #FACC15) */}
+            <div className="bg-[#FEF9C3] border-2 border-[#EAB308] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                  <span className="text-xs font-black text-[#854D0E] tracking-wider uppercase">
                     Cobertura de Barrios
                   </span>
-                  <span className="text-[10px] font-black bg-[#001E72]/10 text-[#001E72] px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-black bg-[#CA8A04] text-white px-2 py-0.5 rounded-md shadow-xs">
                     40 BARRIOS
                   </span>
                 </div>
-                <div className="text-2xl sm:text-3xl font-black text-[#001E72] mt-0.5">
+                <div className="text-2xl sm:text-3xl font-black text-slate-950 mt-1">
                   {barriosConVotos}{' '}
-                  <span className="text-xs font-semibold text-slate-500">
+                  <span className="text-xs font-bold text-[#854D0E]">
                     con presencia de 40
                   </span>
                 </div>
               </div>
-              <div className="text-xs text-slate-600 font-semibold pt-2 border-t border-slate-200 mt-2 flex items-center justify-between">
-                <span>Por reforzar: <strong className="text-[#001E72] font-black">{40 - barriosConVotos} barrios</strong></span>
-                <span className="text-[11px] text-slate-400">Turbo Urbano</span>
+              <div className="text-xs text-[#854D0E] font-bold pt-2 border-t border-[#EAB308]/40 mt-2.5 flex items-center justify-between">
+                <span>Por reforzar: <strong className="text-slate-950 font-black">{40 - barriosConVotos} barrios</strong></span>
+                <span className="text-[11px] text-[#A16207]">Turbo Urbano</span>
               </div>
             </div>
 
-            {/* Tarjeta 4: Comando General & Mandos (Celeste Aristóteles) */}
-            <div className="bg-[#f0f9ff] border border-[#0080FF]/40 rounded-2xl p-4 shadow-xs flex flex-col justify-between">
+            {/* Tarjeta 4: Comando Activo & Estructura (Verde Menta Aristóteles #DCFCE7 con borde #4ADE80) */}
+            <div className="bg-[#DCFCE7] border-2 border-[#4ADE80] rounded-2xl p-4 shadow-sm flex flex-col justify-between transition hover:shadow-md">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-slate-700 tracking-wider uppercase">
+                  <span className="text-xs font-black text-[#166534] tracking-wider uppercase">
                     Comando Activo
                   </span>
                   <button
@@ -595,18 +595,18 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                     Admin
                   </button>
                 </div>
-                <div className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 truncate">
+                <div className="text-lg sm:text-xl font-black text-slate-950 mt-1 truncate">
                   {currentUser.nombre_completo}
                 </div>
-                <div className="text-xs text-slate-500 capitalize">
+                <div className="text-xs text-[#166534] font-bold capitalize">
                   {currentUser.rol.replace(/_/g, ' ')}
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-600 font-medium pt-2 border-t border-blue-100 mt-2">
+              <div className="flex items-center justify-between text-xs text-[#166534] font-bold pt-2 border-t border-[#4ADE80]/40 mt-2.5">
                 <span><strong>{systemUsers.length}</strong> mandos en estructura</span>
-                <span className="text-[#166534] font-bold flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-[#3FBC24] animate-pulse"></span> En línea
+                <span className="text-[#15803D] font-black flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-[#16A34A] animate-pulse"></span> En línea
                 </span>
               </div>
             </div>
