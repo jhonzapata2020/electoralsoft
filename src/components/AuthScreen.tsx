@@ -165,7 +165,7 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#EEF2F6] relative flex flex-col justify-between font-sans overflow-x-hidden">
+    <div className="min-h-screen w-full bg-[#EEF2F6] relative flex flex-col justify-between font-sans">
       
       {/* 1. Bandera Oficial de Turbo en el Extremo Superior (Colores Planos Institucionales) */}
       <div className="w-full h-2 flex z-20">
@@ -304,13 +304,13 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
             {/* Formulario con Campos Blancos Estilo Pinterest */}
             <form onSubmit={handleLogin} className="space-y-3.5 sm:space-y-4 flex-1 flex flex-col justify-center">
               
-              {/* Campo Cédula de Ciudadanía */}
+              {/* Campo Cédula de Ciudadanía (Estilo Ergonómico Nequi) */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                   Cédula de Ciudadanía
                 </label>
                 <div className="relative">
-                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <User className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type="text"
                     inputMode="numeric"
@@ -319,68 +319,68 @@ export default function AuthScreen({ onLoginSuccess }: Props) {
                     value={documento}
                     onChange={(e) => setDocumento(e.target.value.replace(/\D/g, ''))}
                     placeholder="Número de cédula (Ej. 1001)"
-                    className="w-full pl-10 pr-4 py-2.5 sm:py-3 bg-white text-slate-900 rounded-xl text-sm font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-sm transition"
+                    className="w-full pl-11 pr-4 py-3.5 sm:py-4 bg-white text-slate-900 rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
                   />
                 </div>
               </div>
 
-              {/* Campo Contraseña */}
+              {/* Campo Contraseña (Estilo Ergonómico Nequi) */}
               <div>
-                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-1.5">
                   Contraseña
                 </label>
                 <div className="relative">
-                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <Lock className="w-5 h-5 text-slate-400 absolute left-3.5 top-3.5" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Contraseña asignada"
-                    className="w-full pl-10 pr-10 py-2.5 sm:py-3 bg-white text-slate-900 rounded-xl text-sm font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-sm transition"
+                    className="w-full pl-11 pr-11 py-3.5 sm:py-4 bg-white text-slate-900 rounded-2xl text-base font-semibold placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#00CFFF] shadow-md transition"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 transition"
+                    className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 transition p-1"
                     title={showPassword ? 'Ocultar' : 'Mostrar'}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
 
               {/* Recordarme y Enlace SOMOS */}
-              <div className="flex items-center justify-between text-xs text-slate-300 pt-0.5">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 rounded text-[#3FBC24] border-slate-400 focus:ring-[#3FBC24]"
                   />
-                  <span className="font-medium text-[11px] sm:text-xs">Recordarme</span>
+                  <span className="font-medium text-xs sm:text-sm">Recordarme</span>
                 </label>
-                <span className="text-[11px] font-bold text-[#F4BD21] tracking-wide">
+                <span className="text-xs font-bold text-[#F4BD21] tracking-wide">
                   SOMOS Turbo
                 </span>
               </div>
 
               {/* Mensaje de Error si aplica */}
               {errorMsg && (
-                <div className="p-2.5 bg-red-900/40 border border-red-500/60 text-red-200 text-xs font-semibold rounded-xl text-center">
+                <div className="p-3 bg-red-900/40 border border-red-500/60 text-red-200 text-xs font-semibold rounded-xl text-center">
                   {errorMsg}
                 </div>
               )}
 
               {/* 
-                Botón de Acción: Amarillo Turbo #F4BD21 con Texto Azul Oscuro #001E72
-                (Cumple la regla del Manual de Marca: Amarillo para llamadas a la acción)
+                Botón de Acción Ergonómico: Amarillo Turbo #F4BD21 con Texto Azul Oscuro #001E72
+                (Altura generosa 52px estilo Nequi con respuesta táctil)
               */}
               <button
                 type="submit"
                 disabled={loading || !documento.trim() || !password.trim()}
-                className="w-full py-3 sm:py-3.5 px-4 rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] shadow-lg shadow-black/20 hover:shadow-xl active:scale-[0.99] disabled:opacity-50 transition mt-1.5"
+                className="w-full py-4 px-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] shadow-xl shadow-black/25 active:scale-[0.98] disabled:opacity-50 transition mt-2"
               >
                 {loading ? (
                   <>

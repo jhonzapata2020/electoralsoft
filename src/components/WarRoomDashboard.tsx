@@ -1078,9 +1078,9 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                   </div>
                 </div>
 
-                <form onSubmit={handleCreateSystemUser} className="space-y-3.5">
+                <form onSubmit={handleCreateSystemUser} className="space-y-4">
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                       Nombre Completo *
                     </label>
                     <input
@@ -1089,12 +1089,12 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                       value={newNombre}
                       onChange={(e) => setNewNombre(e.target.value)}
                       placeholder="Ej. Carmen Palacios"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-base font-semibold focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none focus:bg-white transition"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                       Cédula (Usuario para ingresar) *
                     </label>
                     <input
@@ -1104,12 +1104,12 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                       value={newDoc}
                       onChange={(e) => setNewDoc(e.target.value.replace(/\D/g, ''))}
                       placeholder="Ej. 1017894561"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-base font-semibold focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none focus:bg-white transition"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                       Teléfono Celular (Para enviar WhatsApp) *
                     </label>
                     <input
@@ -1118,35 +1118,36 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                       value={newTel}
                       onChange={(e) => setNewTel(e.target.value)}
                       placeholder="300 000 0000"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-base font-semibold focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none focus:bg-white transition"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                       Rol Asignado
                     </label>
                     <select
                       value={newRol}
                       onChange={(e) => setNewRol(e.target.value as Rol)}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-sm font-semibold focus:border-[#0080FF] focus:outline-none focus:bg-white transition"
                     >
                       <option value="secretaria">Secretaria de Equipo Operativo</option>
                       <option value="coordinador">Coordinador General</option>
                       <option value="secretaria_general">Secretaria General</option>
                       <option value="lider_junta_directiva">Líder de Equipo Operativo</option>
+                      <option value="gerente_general">Gerente General (Admin)</option>
                     </select>
                   </div>
 
                   {['secretaria', 'lider_junta_directiva'].includes(newRol) && (
                     <div>
-                      <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                      <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                         Equipo Operativo Asignado
                       </label>
                       <select
                         value={newJuntaId}
                         onChange={(e) => setNewJuntaId(Number(e.target.value))}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-sm font-semibold focus:border-[#0080FF] focus:outline-none focus:bg-white transition"
                       >
                         {territory.juntas.map((j: any) => (
                           <option key={j.id} value={j.id}>{j.nombre}</option>
@@ -1156,30 +1157,30 @@ ${typeof window !== 'undefined' ? window.location.origin : 'http://localhost:300
                   )}
 
                   <div>
-                    <label className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
                       Contraseña Asignada (Opcional, por defecto su Cédula)
                     </label>
                     <input
                       type="text"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Si lo dejas vacío, su contraseña será su cédula"
-                      className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-900 text-xs focus:border-[#0080FF] focus:outline-none focus:bg-white"
+                      placeholder="Por defecto su número de cédula"
+                      className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-slate-900 text-base font-semibold focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none focus:bg-white transition"
                     />
                   </div>
 
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2.5 pt-2">
                     <button
                       type="button"
                       onClick={() => setUserModalOpen(false)}
-                      className="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                      className="w-1/2 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-2xl transition"
                     >
                       Cancelar
                     </button>
                     <button
                       type="submit"
                       disabled={savingUser}
-                      className="w-1/2 py-2.5 bg-[#0080FF] hover:bg-[#0070e0] text-white font-bold text-xs rounded-xl transition shadow"
+                      className="w-1/2 py-3 bg-[#F4BD21] hover:bg-[#e0ac1a] text-[#001E72] font-black text-xs uppercase tracking-wider rounded-2xl transition shadow-md active:scale-95 disabled:opacity-50"
                     >
                       {savingUser ? 'Guardando...' : 'Crear Usuario'}
                     </button>

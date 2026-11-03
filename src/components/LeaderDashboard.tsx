@@ -187,7 +187,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
   const percent = meta > 0 ? Math.min(100, Math.round((total / meta) * 100)) : 100;
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20 select-none">
+    <div className="min-h-screen bg-slate-100 flex flex-col text-slate-900 pb-20">
       {/* Cinta Tricolor Bandera de Turbo */}
       <div className="w-full h-1.5 flex">
         <div className="h-full w-1/3 bg-[#F4BD21]" />
