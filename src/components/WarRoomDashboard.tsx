@@ -1480,17 +1480,19 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                                     </td>
                                     <td className="p-3 text-right">
                                       <div className="flex items-center justify-end gap-1.5">
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingVoter(v);
-                                          }}
-                                          className="px-2.5 py-1.5 bg-[#0080FF] hover:bg-[#0070e0] text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition"
-                                          title="Editar teléfono o datos de este votante"
-                                        >
-                                          <Pencil className="w-3.5 h-3.5" />
-                                          <span>Editar</span>
-                                        </button>
+                                        {currentUser.rol === 'gerente_general' && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingVoter(v);
+                                            }}
+                                            className="px-2.5 py-1.5 bg-[#0080FF] hover:bg-[#0070e0] text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-xs active:scale-95 transition"
+                                            title="Editar campos de este votante (Solo Admin)"
+                                          >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                            <span>Editar</span>
+                                          </button>
+                                        )}
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
@@ -1869,6 +1871,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
         voter={selectedVoter}
         isOpen={inspectorOpen}
         onClose={() => setInspectorOpen(false)}
+        canEdit={currentUser.rol === 'gerente_general'}
         onVoterUpdated={(updated) => {
           setLiveVoters((prev) =>
             prev.map((v) => (v.id === updated.id || v.documento === updated.documento ? { ...v, ...updated } : v))

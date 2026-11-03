@@ -30,6 +30,7 @@ interface Props {
   onClose: () => void;
   onVoterUpdated?: (updated: Votante) => void;
   initialEditMode?: boolean;
+  canEdit?: boolean;
 }
 
 export default function ContactInspectorDrawer({
@@ -38,6 +39,7 @@ export default function ContactInspectorDrawer({
   onClose,
   onVoterUpdated,
   initialEditMode = false,
+  canEdit = true,
 }: Props) {
   const [isEditing, setIsEditing] = useState(initialEditMode);
   const [editNombre, setEditNombre] = useState('');
@@ -158,12 +160,12 @@ export default function ContactInspectorDrawer({
           </div>
 
           <div className="flex items-center gap-1.5">
-            {!isEditing && (
+            {!isEditing && canEdit && (
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
                 className="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-xl text-xs font-black flex items-center gap-1.5 transition"
-                title="Editar teléfono o datos del votante"
+                title="Editar datos del votante"
               >
                 <Pencil className="w-3.5 h-3.5 text-[#F4BD21]" />
                 <span className="hidden sm:inline">Editar Campos</span>
@@ -225,11 +227,10 @@ export default function ContactInspectorDrawer({
               />
             </div>
 
-            {/* Teléfono Celular (CAMPO PRINCIPAL) */}
-            <div className="p-3.5 rounded-2xl bg-amber-50/70 border-2 border-amber-300 space-y-1">
-              <label className="text-xs font-black uppercase text-amber-900 tracking-wider flex items-center justify-between">
-                <span>📱 Teléfono Celular *</span>
-                <span className="text-[10px] text-amber-700 font-semibold">Línea WhatsApp</span>
+            {/* Teléfono Celular (Mismo formato y tamaño) */}
+            <div>
+              <label className="text-xs font-black uppercase text-slate-700 tracking-wider block mb-1">
+                Teléfono Celular *
               </label>
               <input
                 type="tel"
@@ -237,11 +238,8 @@ export default function ContactInspectorDrawer({
                 value={editTelefono}
                 onChange={(e) => setEditTelefono(e.target.value)}
                 placeholder="Ej. 320 710 5318"
-                className="w-full bg-white border border-amber-300 rounded-xl px-4 py-3 text-base font-mono font-black text-slate-900 focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none"
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-900 focus:bg-white focus:border-[#0080FF] focus:outline-none"
               />
-              <p className="text-[11px] text-amber-800 font-medium">
-                💡 Este es el número al que se enviarán las comunicaciones oficiales por WhatsApp.
-              </p>
             </div>
 
             {/* Nombre Completo */}
@@ -402,13 +400,15 @@ export default function ContactInspectorDrawer({
                 <span className="text-xs font-black uppercase tracking-wider text-slate-700 block">
                   Canales de Contacto Directo
                 </span>
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="text-[11px] font-bold text-[#0080FF] hover:underline flex items-center gap-1"
-                >
-                  <Pencil className="w-3 h-3" /> Editar Campos
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="text-[11px] font-bold text-[#0080FF] hover:underline flex items-center gap-1"
+                  >
+                    <Pencil className="w-3 h-3" /> Editar Campos
+                  </button>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-2">
@@ -528,16 +528,18 @@ export default function ContactInspectorDrawer({
         {/* Pie de Acciones del Inspector */}
         {!isEditing && (
           <div className="p-4 bg-slate-50 border-t border-slate-200 flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex-1 py-2.5 bg-[#001E72] hover:bg-[#001655] text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-md"
-            >
-              <Pencil className="w-3.5 h-3.5 text-[#F4BD21]" />
-              <span>Editar Campos</span>
-            </button>
+            {canEdit && (
+              <button
+                onClick={() => setIsEditing(true)}
+                className="flex-1 py-2.5 bg-[#001E72] hover:bg-[#001655] text-white font-black text-xs uppercase tracking-wider rounded-xl flex items-center justify-center gap-2 transition active:scale-95 shadow-md"
+              >
+                <Pencil className="w-3.5 h-3.5 text-[#F4BD21]" />
+                <span>Editar Campos</span>
+              </button>
+            )}
             <button
               onClick={onClose}
-              className="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition"
+              className={`${canEdit ? 'px-4' : 'w-full'} py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs rounded-xl transition`}
             >
               Cerrar
             </button>

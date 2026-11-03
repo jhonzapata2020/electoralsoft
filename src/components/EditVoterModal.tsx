@@ -138,31 +138,6 @@ export default function EditVoterModal({ voter, isOpen, onClose, onVoterUpdated 
             </div>
           )}
 
-          {/* CAMPO DESTACADO: NÚMERO DE TELÉFONO */}
-          <div className="p-4 rounded-2xl bg-blue-50/80 border-2 border-[#0080FF] space-y-1.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black uppercase text-[#001E72] tracking-wider flex items-center gap-1.5">
-                <Phone className="w-4 h-4 text-[#0080FF]" />
-                <span>Número de Teléfono Celular *</span>
-              </label>
-              <span className="text-[10px] font-black text-[#166534] bg-emerald-100 px-2 py-0.5 rounded-full">
-                Línea WhatsApp
-              </span>
-            </div>
-            <input
-              type="tel"
-              required
-              autoFocus
-              value={telefono}
-              onChange={(e) => setTelefono(e.target.value)}
-              placeholder="Ej. 320 710 5318"
-              className="w-full bg-white border border-blue-300 rounded-xl px-4 py-3 text-lg font-mono font-black text-slate-950 focus:border-[#0080FF] focus:ring-4 focus:ring-[#0080FF]/20 focus:outline-none transition"
-            />
-            <p className="text-[11px] text-slate-600 font-medium">
-              💡 Digita aquí el nuevo número. Se actualizará de inmediato para llamadas y envíos de WhatsApp.
-            </p>
-          </div>
-
           {/* Nombre Completo */}
           <div>
             <label className="text-xs font-black uppercase text-slate-700 tracking-wider block mb-1">
@@ -173,7 +148,23 @@ export default function EditVoterModal({ voter, isOpen, onClose, onVoterUpdated 
               required
               value={nombre}
               onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombres y Apellidos"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-900 focus:bg-white focus:border-[#0080FF] focus:outline-none"
+            />
+          </div>
+
+          {/* Teléfono Celular (Mismo formato y tamaño que el resto) */}
+          <div>
+            <label className="text-xs font-black uppercase text-slate-700 tracking-wider block mb-1">
+              Teléfono Celular *
+            </label>
+            <input
+              type="tel"
+              required
+              value={telefono}
+              onChange={(e) => setTelefono(e.target.value)}
+              placeholder="Ej. 320 710 5318"
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-mono font-bold text-slate-900 focus:bg-white focus:border-[#0080FF] focus:outline-none"
             />
           </div>
 
