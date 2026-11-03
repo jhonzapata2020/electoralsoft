@@ -35,12 +35,9 @@ export default function HomePage() {
     const fetchRemote = async () => {
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         try {
-          const { data, error } = await supabase
-            .from('votantes')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-          if (!error && data) {
+          const res = await fetch('/api/voters');
+          if (res.ok) {
+            const data = await res.json();
             const remoteList = data as Votante[];
             const map = new Map<string, Votante>();
             remoteList.forEach((rv) => map.set(rv.documento, { ...rv, _synced: true }));
@@ -52,7 +49,7 @@ export default function HomePage() {
             setVoters(Array.from(map.values()));
           }
         } catch (err) {
-          console.warn('Supabase fetch background', err);
+          console.warn('API fetch background', err);
         }
       }
     };

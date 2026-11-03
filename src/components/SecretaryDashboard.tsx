@@ -64,20 +64,23 @@ export default function SecretaryDashboard({ currentUser, onLogout, onVoterAdded
   const loadData = async () => {
     setLoading(true);
     try {
-      const { data: usersData } = await supabase
-        .from('usuarios_sistema')
-        .select('*')
-        .eq('junta_directiva_id', juntaId)
-        .in('rol', ['lider_junta_directiva', 'lider_equipo_operativo', 'lider_barrial']);
+      const [usersRes, votersRes] = await Promise.all([
+        fetch(`/api/users?junta_id=${juntaId}`),
+        fetch(`/api/voters?junta_id=${juntaId}`),
+      ]);
 
-      if (usersData) setLeaders(usersData as UsuarioSistema[]);
+      if (usersRes.ok) {
+        const usersData = await usersRes.json();
+        const filteredLeaders = (usersData as UsuarioSistema[]).filter((u) =>
+          ['lider_junta_directiva', 'lider_equipo_operativo', 'lider_barrial'].includes(u.rol)
+        );
+        setLeaders(filteredLeaders);
+      }
 
-      const { data: votersData } = await supabase
-        .from('votantes')
-        .select('*')
-        .eq('junta_directiva_id', juntaId);
-
-      if (votersData) setJuntaVoters(votersData as Votante[]);
+      if (votersRes.ok) {
+        const votersData = await votersRes.json();
+        setJuntaVoters(votersData as Votante[]);
+      }
     } catch (err) {
       console.error('Error cargando datos de secretaria', err);
     } finally {
@@ -114,29 +117,35 @@ export default function SecretaryDashboard({ currentUser, onLogout, onVoterAdded
       is_active: true,
     };
 
-    const { data, error } = await supabase
-      .from('usuarios_sistema')
-      .insert([newLeaderPayload])
-      .select()
-      .single();
-
-    setSavingLeader(false);
-
-    if (error) {
-      alert('Error: ' + (error.code === '23505' ? 'Esta cédula ya está registrada.' : error.message));
-    } else {
-      const created = data as UsuarioSistema;
-      setLeaders([created, ...leaders]);
-      setCreatedLeaderSuccess({
-        nombre: created.nombre_completo,
-        doc: created.documento,
-        tel: created.telefono,
-        pass: pass,
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLeaderPayload),
       });
-      setNewLeaderNombre('');
-      setNewLeaderDoc('');
-      setNewLeaderTel('');
-      setNewLeaderPassword('');
+
+      const result = await res.json();
+      setSavingLeader(false);
+
+      if (!res.ok) {
+        alert(result.error || 'Error al registrar líder.');
+      } else {
+        const created = result as UsuarioSistema;
+        setLeaders([created, ...leaders]);
+        setCreatedLeaderSuccess({
+          nombre: created.nombre_completo,
+          doc: created.documento,
+          tel: created.telefono,
+          pass: pass,
+        });
+        setNewLeaderNombre('');
+        setNewLeaderDoc('');
+        setNewLeaderTel('');
+        setNewLeaderPassword('');
+      }
+    } catch (err: any) {
+      setSavingLeader(false);
+      alert('Error de red al guardar: ' + (err.message || 'Intenta de nuevo'));
     }
   };
 

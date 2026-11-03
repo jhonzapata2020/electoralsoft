@@ -78,11 +78,11 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   const loadAllUsers = async () => {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from('usuarios_sistema')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (data) setSystemUsers(data as UsuarioSistema[]);
+      const res = await fetch('/api/users');
+      if (res.ok) {
+        const data = await res.json();
+        setSystemUsers(data as UsuarioSistema[]);
+      }
     } catch (err) {
       console.error('Error cargando usuarios', err);
     } finally {
@@ -174,25 +174,36 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
       is_active: true,
     };
 
-    const { data, error } = await supabase.from('usuarios_sistema').insert([payload]).select().single();
-    setSavingUser(false);
-
-    if (error) {
-      alert('Error: ' + (error.code === '23505' ? 'Cédula ya registrada' : error.message));
-    } else {
-      const created = data as UsuarioSistema;
-      setSystemUsers([created, ...systemUsers]);
-      setCreatedUserSuccess({
-        nombre: created.nombre_completo,
-        doc: created.documento,
-        tel: created.telefono,
-        pass: pass,
-        rol: created.rol.replace(/_/g, ' '),
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-      setNewNombre('');
-      setNewDoc('');
-      setNewTel('');
-      setNewPassword('');
+
+      const result = await res.json();
+      setSavingUser(false);
+
+      if (!res.ok) {
+        alert(result.error || 'Error creando usuario en el sistema.');
+      } else {
+        const created = result as UsuarioSistema;
+        setSystemUsers([created, ...systemUsers]);
+        setCreatedUserSuccess({
+          nombre: created.nombre_completo,
+          doc: created.documento,
+          tel: created.telefono,
+          pass: pass,
+          rol: created.rol.replace(/_/g, ' '),
+        });
+        setNewNombre('');
+        setNewDoc('');
+        setNewTel('');
+        setNewPassword('');
+      }
+    } catch (err: any) {
+      setSavingUser(false);
+      alert('Error de red al crear usuario: ' + (err.message || 'Intenta de nuevo'));
     }
   };
 
@@ -204,15 +215,21 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
 
     if (!confirm(confirmMsg)) return;
 
-    const { error } = await supabase
-      .from('usuarios_sistema')
-      .update({ is_active: newStatus })
-      .eq('id', user.id);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: user.id, is_active: newStatus }),
+      });
 
-    if (error) {
-      alert('Error actualizando estado: ' + error.message);
-    } else {
-      setSystemUsers(systemUsers.map((u) => (u.id === user.id ? { ...u, is_active: newStatus } : u)));
+      if (!res.ok) {
+        const result = await res.json();
+        alert('Error actualizando estado: ' + (result.error || 'Intenta de nuevo'));
+      } else {
+        setSystemUsers(systemUsers.map((u) => (u.id === user.id ? { ...u, is_active: newStatus } : u)));
+      }
+    } catch (err: any) {
+      alert('Error de red: ' + err.message);
     }
   };
 

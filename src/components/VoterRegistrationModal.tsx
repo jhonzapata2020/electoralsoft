@@ -86,17 +86,20 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
         return;
       }
 
-      // 2. Si hay señal, verificar en Supabase
+      // 2. Si hay señal, verificar en Supabase mediante el API seguro
       if (typeof navigator !== 'undefined' && navigator.onLine) {
         setCheckingDoc(true);
         try {
-          const { data } = await supabase.from('votantes').select('id, documento, nombre_completo').eq('documento', docClean).maybeSingle();
-          if (data) {
-            setDocExists(true);
-            setDocErrorMsg(`⚠️ Ya registrado en la base de datos (${data.nombre_completo}).`);
-          } else {
-            setDocExists(false);
-            setDocErrorMsg('');
+          const res = await fetch(`/api/voters?doc=${encodeURIComponent(docClean)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.documento) {
+              setDocExists(true);
+              setDocErrorMsg(`⚠️ Ya registrado en la base de datos (${data.nombre_completo}).`);
+            } else {
+              setDocExists(false);
+              setDocErrorMsg('');
+            }
           }
         } catch {
           setDocExists(null);

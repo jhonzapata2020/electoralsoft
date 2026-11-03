@@ -155,14 +155,19 @@ export async function registerVoter(voterData: Omit<Votante, 'id' | 'created_at'
     };
   }
 
-  // 3. Si hay conexión, intentar enviar a Supabase inmediatamente
+  // 3. Si hay conexión, intentar enviar a Supabase inmediatamente por el API Route seguro
   try {
     const { _is_local, _synced, barrio_nombre, vereda_nombre, registrador_nombre, ...payload } = newVoter;
-    const { error } = await supabase.from('votantes').insert([payload]);
+    const res = await fetch('/api/voters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-    if (error) {
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
       // Si falló por duplicidad de cédula
-      if (error.code === '23505') {
+      if (res.status === 409 || errData.error?.includes('ya está registrada')) {
         // Remover de cache local
         setStorage(
           STORAGE_KEYS.VOTERS_CACHE,
@@ -182,7 +187,7 @@ export async function registerVoter(voterData: Omit<Votante, 'id' | 'created_at'
         success: true,
         voter: newVoter,
         isOffline: true,
-        message: 'Guardado localmente. Se reintentará sincronizar con Supabase en breve.',
+        message: 'Guardado localmente. Se reintentará sincronizar con la nube en breve.',
       };
     }
 
@@ -237,10 +242,14 @@ export async function processSyncQueue(
       for (const voter of pendingVoters) {
         try {
           const { _is_local, _synced, barrio_nombre, vereda_nombre, registrador_nombre, ...payload } = voter;
-          const { error } = await supabase.from('votantes').upsert([payload], { onConflict: 'documento' });
+          const res = await fetch('/api/voters', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
 
-          if (error) {
-            console.error('Error sincronizando votante:', voter.documento, error);
+          if (!res.ok) {
+            console.error('Error sincronizando votante:', voter.documento);
             remainingVoters.push(voter);
             errorsCount++;
           } else {
@@ -266,8 +275,13 @@ export async function processSyncQueue(
       for (const user of pendingUsers) {
         try {
           const { junta_nombre, barrio_nombre, corregimiento_nombre, vereda_nombre, ...payload } = user;
-          const { error } = await supabase.from('usuarios_sistema').upsert([payload], { onConflict: 'documento' });
-          if (error) {
+          const res = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!res.ok) {
             remainingUsers.push(user);
             errorsCount++;
           } else {
