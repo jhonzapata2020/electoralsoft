@@ -63,6 +63,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
   const [docErrorMsg, setDocErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [isFormExpanded, setIsFormExpanded] = useState(false);
 
   // Búsqueda en Lista
   const [searchTerm, setSearchTerm] = useState('');
@@ -176,6 +177,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
       setProfesion('');
       setCorreo('');
       setDocExists(null);
+      setIsFormExpanded(false);
 
       setTimeout(() => {
         setSaveSuccessMsg(null);
@@ -325,8 +327,38 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
             </button>
           </div>
 
-          {/* Tarjeta del Formulario Táctil */}
-          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xl shadow-slate-200/70 space-y-4">
+          {/* Tarjeta del Formulario Táctil (Con Efecto Expansión Inteligente para Adultos Mayores) */}
+          <div
+            className={`bg-white rounded-3xl border border-slate-200 transition-all duration-300 ease-out space-y-4 ${
+              isFormExpanded
+                ? 'p-6 sm:p-7 shadow-2xl ring-4 ring-[#0080FF]/20 scale-[1.01]'
+                : 'p-5 sm:p-6 shadow-xl shadow-slate-200/70'
+            }`}
+          >
+            {/* Banner de Modo Ampliado cuando se expande */}
+            {isFormExpanded && (
+              <div className="flex items-center justify-between pb-3 border-b border-blue-100 bg-blue-50/70 -mx-6 -mt-6 sm:-mx-7 sm:-mt-7 p-4 sm:p-5 rounded-t-3xl animate-fade-in">
+                <div className="flex items-center gap-2.5">
+                  <span className="w-3 h-3 rounded-full bg-[#3FBC24] animate-pulse shrink-0" />
+                  <div>
+                    <span className="text-xs font-black uppercase tracking-wider text-[#001E72] block">
+                      Modo Enfoque • Letra Grande
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      Campos y letras ampliadas para lectura fácil y cómoda
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFormExpanded(false)}
+                  className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 text-xs font-black rounded-xl border border-slate-200 shadow-xs transition active:scale-95 shrink-0"
+                >
+                  Contraer ✕
+                </button>
+              </div>
+            )}
+
             {saveSuccessMsg && (
               <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-300 text-[#3FBC24] flex items-center gap-2 font-bold text-xs shadow-sm animate-fade-in">
                 <CheckCircle2 className="w-5 h-5 shrink-0 text-[#3FBC24]" />
@@ -334,10 +366,12 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-3.5">
+            <form onSubmit={handleSubmit} className={isFormExpanded ? 'space-y-5' : 'space-y-3.5'}>
               {/* Cédula */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+                  isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+                }`}>
                   Cédula *
                 </label>
                 <div className="relative">
@@ -346,9 +380,14 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                     inputMode="numeric"
                     required
                     value={documento}
+                    onFocus={() => setIsFormExpanded(true)}
                     onChange={(e) => setDocumento(e.target.value.replace(/\D/g, ''))}
-                    placeholder="Número de Cédula"
-                    className={`w-full bg-slate-50 border rounded-2xl px-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:outline-none transition ${
+                    placeholder={isFormExpanded ? 'Escribe aquí el número de cédula...' : 'Número de Cédula'}
+                    className={`w-full bg-slate-50 border rounded-2xl transition-all duration-200 ${
+                      isFormExpanded
+                        ? 'px-5 py-4.5 sm:py-5 text-xl font-black placeholder:text-base text-slate-950'
+                        : 'px-4 py-3.5 text-base font-semibold text-slate-900'
+                    } focus:bg-white focus:outline-none ${
                       docExists === true
                         ? 'border-red-400 focus:border-red-500'
                         : docExists === false
@@ -356,7 +395,7 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                         : 'border-slate-200 focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20'
                     }`}
                   />
-                  <div className="absolute right-3.5 top-3.5">
+                  <div className={`absolute right-4 ${isFormExpanded ? 'top-5' : 'top-3.5'}`}>
                     {checkingDoc ? (
                       <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
                     ) : docExists === true ? (
@@ -366,29 +405,38 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                     ) : null}
                   </div>
                 </div>
-                {docErrorMsg && <p className="text-xs text-red-600 font-bold mt-1">{docErrorMsg}</p>}
-                {docExists === false && <p className="text-xs text-emerald-600 font-bold mt-1">✓ Cédula disponible</p>}
+                {docErrorMsg && <p className="text-xs text-red-600 font-bold mt-1.5">{docErrorMsg}</p>}
+                {docExists === false && <p className="text-xs text-emerald-600 font-bold mt-1.5">✓ Cédula disponible para registrar</p>}
               </div>
 
               {/* Nombre Completo */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+                  isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+                }`}>
                   Nombre Completo *
                 </label>
                 <input
                   type="text"
                   required
                   value={nombre}
+                  onFocus={() => setIsFormExpanded(true)}
                   onChange={(e) => setNombre(e.target.value)}
                   onBlur={() => setNombre(formatTitleCase(nombre))}
-                  placeholder="Nombres y Apellidos"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none"
+                  placeholder={isFormExpanded ? 'Escribe los Nombres y Apellidos completos...' : 'Nombres y Apellidos'}
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-2xl transition-all duration-200 ${
+                    isFormExpanded
+                      ? 'px-5 py-4 sm:py-4.5 text-lg font-bold placeholder:text-base text-slate-950'
+                      : 'px-4 py-3.5 text-base font-semibold text-slate-900'
+                  } focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none`}
                 />
               </div>
 
               {/* Teléfono */}
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+                  isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+                }`}>
                   Teléfono Celular *
                 </label>
                 <input
@@ -396,23 +444,34 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                   inputMode="tel"
                   required
                   value={telefono}
+                  onFocus={() => setIsFormExpanded(true)}
                   onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="300 000 0000"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none"
+                  placeholder={isFormExpanded ? 'Número Celular (ej. 300 123 4567)...' : '300 000 0000'}
+                  className={`w-full bg-slate-50 border border-slate-200 rounded-2xl transition-all duration-200 ${
+                    isFormExpanded
+                      ? 'px-5 py-4 sm:py-4.5 text-lg font-bold font-mono placeholder:text-base text-slate-950'
+                      : 'px-4 py-3.5 text-base font-semibold text-slate-900'
+                  } focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none`}
                 />
               </div>
 
               {/* Territorio: Barrio o Vereda */}
               {isUrbano ? (
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+                    isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+                  }`}>
                     Barrio *
                   </label>
                   <select
                     required
                     value={barrioId}
                     onChange={(e) => setBarrioId(Number(e.target.value))}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3.5 text-slate-900 text-sm font-semibold focus:bg-white focus:border-[#0080FF]"
+                    className={`w-full bg-slate-50 border border-slate-200 rounded-2xl transition-all duration-200 ${
+                      isFormExpanded
+                        ? 'px-5 py-4 sm:py-4.5 text-base font-bold text-slate-950'
+                        : 'px-4 py-3.5 text-sm font-semibold text-slate-900'
+                    } focus:bg-white focus:border-[#0080FF]`}
                   >
                     {displayBarrios.map((b) => (
                       <option key={b.id} value={b.id}>
@@ -508,7 +567,9 @@ export default function LeaderDashboard({ currentUser, voters, onLogout, onVoter
                 <button
                   type="submit"
                   disabled={isSubmitting || docExists === true}
-                  className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 bg-[#0080FF] hover:bg-[#0070e0] active:scale-[0.99] text-white shadow-xl shadow-[#0080FF]/30 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                  className={`w-full rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-2 bg-[#0080FF] hover:bg-[#0070e0] active:scale-[0.99] text-white shadow-xl shadow-[#0080FF]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all ${
+                    isFormExpanded ? 'py-5 text-base sm:text-lg shadow-[#0080FF]/40' : 'py-4 text-sm'
+                  }`}
                 >
                   {isSubmitting ? (
                     <>

@@ -35,6 +35,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
   const [docErrorMsg, setDocErrorMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
+  const [isFormExpanded, setIsFormExpanded] = useState(false);
 
   const territory = getCachedTerritory();
   const availableBarrios = territory.barrios.filter((b) => (juntaId ? Number(b.junta_directiva_id) === Number(juntaId) : true));
@@ -53,6 +54,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
       setDocExists(null);
       setDocErrorMsg('');
       setSubmitSuccess(null);
+      setIsFormExpanded(false);
       if (currentUser.junta_directiva_id) setJuntaId(currentUser.junta_directiva_id);
       if (currentUser.barrio_id) setBarrioId(currentUser.barrio_id);
       if (currentUser.corregimiento_id) setCorregimientoId(currentUser.corregimiento_id);
@@ -190,8 +192,34 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
           </button>
         </div>
 
-        {/* Formulario Mobile-First Táctil (Inputs de 48px para fácil tipeo con el pulgar) */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto flex-1">
+        {/* Formulario Mobile-First Táctil (Con Efecto Expansión Inteligente para Adultos Mayores) */}
+        <form onSubmit={handleSubmit} className={`overflow-y-auto flex-1 transition-all duration-300 ${
+          isFormExpanded ? 'p-5 sm:p-6 space-y-5 bg-white' : 'p-5 space-y-4'
+        }`}>
+          {/* Banner de Modo Enfoque Ampliado */}
+          {isFormExpanded && (
+            <div className="flex items-center justify-between pb-3 border-b border-blue-100 bg-blue-50/70 -mx-5 -mt-5 sm:-mx-6 sm:-mt-6 p-4 rounded-t-none animate-fade-in">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#3FBC24] animate-pulse shrink-0" />
+                <div>
+                  <span className="text-xs font-black uppercase tracking-wider text-[#001E72] block">
+                    Modo Enfoque • Letra Grande
+                  </span>
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    Campos ampliados para lectura fácil
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsFormExpanded(false)}
+                className="px-2.5 py-1 bg-white hover:bg-slate-100 text-slate-700 text-xs font-black rounded-xl border border-slate-200 shadow-xs transition active:scale-95"
+              >
+                Contraer ✕
+              </button>
+            </div>
+          )}
+
           {submitSuccess && (
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-[#3FBC24] flex items-center gap-2.5 shadow-sm">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
@@ -201,7 +229,9 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
 
           {/* Cédula */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+              isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+            }`}>
               Cédula de Ciudadanía *
             </label>
             <div className="relative">
@@ -210,9 +240,14 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                 inputMode="numeric"
                 required
                 value={documento}
+                onFocus={() => setIsFormExpanded(true)}
                 onChange={(e) => setDocumento(e.target.value.replace(/\D/g, ''))}
-                placeholder="Ej. 1017123456"
-                className={`w-full bg-slate-50 border rounded-2xl px-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:outline-none transition ${
+                placeholder={isFormExpanded ? 'Escribe aquí el número de cédula...' : 'Ej. 1017123456'}
+                className={`w-full bg-slate-50 border rounded-2xl transition-all duration-200 ${
+                  isFormExpanded
+                    ? 'px-5 py-4.5 sm:py-5 text-xl font-black placeholder:text-base text-slate-950'
+                    : 'px-4 py-3.5 text-base font-semibold text-slate-900'
+                } focus:bg-white focus:outline-none ${
                   docExists === true
                     ? 'border-red-400 focus:border-red-500'
                     : docExists === false
@@ -220,7 +255,7 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                     : 'border-slate-200 focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20'
                 }`}
               />
-              <div className="absolute right-4 top-3.5">
+              <div className={`absolute right-4 ${isFormExpanded ? 'top-5' : 'top-3.5'}`}>
                 {checkingDoc ? (
                   <Loader2 className="w-5 h-5 text-slate-400 animate-spin" />
                 ) : docExists === true ? (
@@ -230,44 +265,58 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
                 ) : null}
               </div>
             </div>
-            {docErrorMsg && <p className="text-xs text-red-600 font-bold mt-1">{docErrorMsg}</p>}
-            {docExists === false && <p className="text-xs text-emerald-600 font-bold mt-1">✓ Cédula disponible para registrar</p>}
+            {docErrorMsg && <p className="text-xs text-red-600 font-bold mt-1.5">{docErrorMsg}</p>}
+            {docExists === false && <p className="text-xs text-emerald-600 font-bold mt-1.5">✓ Cédula disponible para registrar</p>}
           </div>
 
           {/* Nombre Completo */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+              isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+            }`}>
               Nombre Completo *
             </label>
             <div className="relative">
-              <User className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+              <User className={`absolute left-4 text-slate-400 pointer-events-none ${isFormExpanded ? 'w-6 h-6 top-4.5' : 'w-5 h-5 top-3.5'}`} />
               <input
                 type="text"
                 required
                 value={nombre}
+                onFocus={() => setIsFormExpanded(true)}
                 onChange={(e) => setNombre(e.target.value)}
                 onBlur={() => setNombre(formatTitleCase(nombre))}
-                placeholder="Nombres y Apellidos"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none transition"
+                placeholder={isFormExpanded ? 'Escribe los Nombres y Apellidos completos...' : 'Nombres y Apellidos'}
+                className={`w-full bg-slate-50 border border-slate-200 rounded-2xl transition-all duration-200 ${
+                  isFormExpanded
+                    ? 'pl-13 pr-5 py-4 sm:py-4.5 text-lg font-bold placeholder:text-base text-slate-950'
+                    : 'pl-11 pr-4 py-3.5 text-base font-semibold text-slate-900'
+                } focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none`}
               />
             </div>
           </div>
 
           {/* Teléfono */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+            <label className={`block uppercase tracking-wider text-slate-800 transition-all ${
+              isFormExpanded ? 'text-xs sm:text-sm font-black mb-1.5' : 'text-xs font-bold mb-1'
+            }`}>
               Teléfono Celular *
             </label>
             <div className="relative">
-              <Phone className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400 pointer-events-none" />
+              <Phone className={`absolute left-4 text-slate-400 pointer-events-none ${isFormExpanded ? 'w-6 h-6 top-4.5' : 'w-5 h-5 top-3.5'}`} />
               <input
                 type="tel"
                 inputMode="tel"
                 required
                 value={telefono}
+                onFocus={() => setIsFormExpanded(true)}
                 onChange={(e) => setTelefono(e.target.value)}
-                placeholder="300 000 0000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3.5 text-slate-900 text-base font-semibold focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none transition"
+                placeholder={isFormExpanded ? 'Número de Celular (ej. 300 123 4567)...' : '300 000 0000'}
+                className={`w-full bg-slate-50 border border-slate-200 rounded-2xl transition-all duration-200 ${
+                  isFormExpanded
+                    ? 'pl-13 pr-5 py-4 sm:py-4.5 text-lg font-bold font-mono placeholder:text-base text-slate-950'
+                    : 'pl-11 pr-4 py-3.5 text-base font-semibold text-slate-900'
+                } focus:bg-white focus:border-[#0080FF] focus:ring-2 focus:ring-[#0080FF]/20 focus:outline-none`}
               />
             </div>
           </div>
@@ -401,7 +450,9 @@ export default function VoterRegistrationModal({ currentUser, isOpen, onClose, o
             <button
               type="submit"
               disabled={isSubmitting || docExists === true}
-              className="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 bg-[#0080FF] hover:bg-[#0070e0] active:scale-[0.99] text-white shadow-xl shadow-[#0080FF]/30 disabled:opacity-40 disabled:cursor-not-allowed transition"
+              className={`w-full rounded-2xl font-black uppercase tracking-wider flex items-center justify-center gap-2 bg-[#0080FF] hover:bg-[#0070e0] active:scale-[0.99] text-white shadow-xl shadow-[#0080FF]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all ${
+                isFormExpanded ? 'py-5 text-base sm:text-lg shadow-[#0080FF]/40' : 'py-4 text-sm'
+              }`}
             >
               {isSubmitting ? (
                 <>
