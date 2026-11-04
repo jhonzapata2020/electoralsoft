@@ -110,9 +110,13 @@ export function getCachedTerritory() {
   const localCorregimientos = getStorage<Corregimiento[]>(STORAGE_KEYS.CORREGIMIENTOS, []);
   const localVeredas = getStorage<Vereda[]>(STORAGE_KEYS.VEREDAS, []);
 
+  // Asegurar siempre las 11 Juntas Oficiales definidas por Janier Lloreda
+  const juntas = localJuntas.length === 11 ? localJuntas : OFFICIAL_JUNTAS;
+  const barrios = localBarrios.length === 40 ? localBarrios : OFFICIAL_BARRIOS;
+
   return {
-    juntas: localJuntas.length > 0 ? localJuntas : OFFICIAL_JUNTAS,
-    barrios: localBarrios.length > 0 ? localBarrios : OFFICIAL_BARRIOS,
+    juntas,
+    barrios,
     corregimientos: localCorregimientos.length > 0 ? localCorregimientos : OFFICIAL_CORREGIMIENTOS,
     veredas: localVeredas.length > 0 ? localVeredas : OFFICIAL_VEREDAS,
   };

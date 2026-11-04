@@ -230,7 +230,7 @@ export default function VoterFilterTopBar({
                   onChange={(e) => update({ juntaId: e.target.value, barrioId: 'todos' })}
                   className="w-1/2 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1.5 text-xs text-slate-900 font-bold focus:bg-white focus:border-[#0080FF] focus:outline-none transition"
                 >
-                  <option value="todas">20 Juntas</option>
+                  <option value="todas">11 Juntas</option>
                   {territory.juntas.map((j) => (
                     <option key={j.id} value={j.id}>
                       {j.nombre}

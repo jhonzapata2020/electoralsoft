@@ -185,17 +185,54 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
   const votosUrbanos = liveVoters.filter((v) => v.zona === 'urbano').length;
   const votosRurales = liveVoters.filter((v) => v.zona === 'rural').length;
 
-  // Estadísticas de las 20 Juntas Directivas
-  const equiposStats = territory.juntas.map((j: any) => {
+  // Estadísticas de las 11 Juntas Directivas y 11 Equipos Operativos (Janier Lloreda)
+  const juntasStats = territory.juntas.slice(0, 11).map((j: any) => {
     const votos = liveVoters.filter((v) => Number(v.junta_directiva_id) === Number(j.id)).length;
-    const lideresCount = systemUsers.filter((u) => Number(u.junta_directiva_id) === Number(j.id)).length;
-    const metaJunta = 1000;
-    const pct = Math.min(100, Math.round((votos / metaJunta) * 100));
+    const lideresJD = systemUsers.filter(
+      (u) => Number(u.junta_directiva_id) === Number(j.id) && u.rol === 'lider_junta_directiva'
+    ).length;
+    const metaLideres = 20; // 20 líderes por junta directiva
+    const metaVotos = 500;  // 20 líderes * 25 votantes
+    const pct = Math.min(100, Math.round((votos / metaVotos) * 100));
     return {
       ...j,
+      nombreCorte: `JD ${j.id}`,
+      nombreCompleto: `Junta Directiva ${j.id}`,
       votos,
-      lideresCount,
-      metaJunta,
+      lideresJD,
+      lideresTotal: lideresJD,
+      metaLideres,
+      metaVotos,
+      pct,
+      status: pct >= 80 ? 'verde' : pct >= 40 ? 'amarillo' : 'rojo',
+    };
+  });
+
+  const equiposStats = territory.juntas.slice(0, 11).map((j: any) => {
+    const votos = liveVoters.filter((v) => Number(v.junta_directiva_id) === Number(j.id)).length;
+    // Los 20 líderes de junta directiva están incluidos automáticamente
+    const lideresJD = systemUsers.filter(
+      (u) => Number(u.junta_directiva_id) === Number(j.id) && u.rol === 'lider_junta_directiva'
+    ).length;
+    // Líderes operativos adicionales (meta 40)
+    const lideresOp = systemUsers.filter(
+      (u) => Number(u.junta_directiva_id) === Number(j.id) &&
+        (u.rol === 'lider_equipo_operativo' || u.rol === 'lider_barrial')
+    ).length;
+    const totalLideres = lideresJD + lideresOp;
+    const metaLideres = 60; // 20 JD (automáticos) + 40 operativos
+    const metaVotos = 1500; // 60 líderes * 25 votantes
+    const pct = Math.min(100, Math.round((votos / metaVotos) * 100));
+    return {
+      ...j,
+      nombreCorte: `Equipo ${j.id}`,
+      nombreCompleto: `Equipo Operativo ${j.id}`,
+      votos,
+      lideresJD,
+      lideresOp,
+      lideresTotal: totalLideres,
+      metaLideres,
+      metaVotos,
       pct,
       status: pct >= 80 ? 'verde' : pct >= 40 ? 'amarillo' : 'rojo',
     };
@@ -212,7 +249,7 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
     return {
       ...b,
       votos,
-      juntaNombre: junta?.nombre || 'Equipo Operativo',
+      juntaNombre: junta?.nombre || `Equipo Operativo #${b.junta_directiva_id}`,
     };
   });
 
@@ -232,16 +269,49 @@ export default function WarRoomDashboard({ currentUser, allVoters, onLogout, onV
 
   // Datos para la gráfica central según el filtro seleccionado
   const chartItems = chartFilter === 'top_barrios'
-    ? topBarrios.slice(0, 10)
+    ? topBarrios.slice(0, 10).map((b: any) => ({
+        id: b.id,
+        nombre: b.nombre,
+        nombreCompleto: b.nombre,
+        votos: b.votos,
+        tipo: 'barrio' as const,
+      }))
     : chartFilter === 'reforzar'
-    ? barriosPorReforzar.slice(0, 10)
+    ? barriosPorReforzar.slice(0, 10).map((b: any) => ({
+        id: b.id,
+        nombre: b.nombre,
+        nombreCompleto: b.nombre,
+        votos: b.votos,
+        tipo: 'barrio' as const,
+      }))
     : chartFilter === 'equipos'
-    ? barrioStats.slice(0, 20).map((b: any) => ({ nombre: b.nombre, votos: b.votos, id: b.id }))
-    : equiposStats.map((eq: any) => ({ nombre: eq.nombre.replace('Junta Directiva ', 'JD '), votos: eq.votos, id: eq.id }));
+    ? equiposStats.map((eq: any) => ({
+        id: eq.id,
+        nombre: eq.nombreCorte,
+        nombreCompleto: eq.nombreCompleto,
+        votos: eq.votos,
+        lideresJD: eq.lideresJD,
+        lideresOp: eq.lideresOp,
+        lideresTotal: eq.lideresTotal,
+        metaLideres: eq.metaLideres,
+        metaVotos: eq.metaVotos,
+        tipo: 'equipo' as const,
+      }))
+    : juntasStats.map((js: any) => ({
+        id: js.id,
+        nombre: js.nombreCorte,
+        nombreCompleto: js.nombreCompleto,
+        votos: js.votos,
+        lideresJD: js.lideresJD,
+        lideresTotal: js.lideresTotal,
+        metaLideres: js.metaLideres,
+        metaVotos: js.metaVotos,
+        tipo: 'junta' as const,
+      }));
 
   const chartMaxVal = Math.max(
     ...chartItems.map((item: any) => item.votos || 0),
-    chartFilter === 'juntas' ? 1000 : 25
+    chartFilter === 'juntas' ? 25 : chartFilter === 'equipos' ? 50 : 20
   );
 
   const handleCreateSystemUser = async (e: React.FormEvent) => {
@@ -659,7 +729,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 : 'border-transparent hover:text-slate-800'
             }`}
           >
-            Análisis de Barrios y Equipos
+            Análisis de Juntas, Equipos y Barrios
           </button>
           <button
             onClick={() => setActiveTab('usuarios')}
@@ -697,45 +767,49 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">
                     {chartFilter === 'juntas'
-                      ? 'Comparativa de las 20 Juntas Directivas'
+                      ? 'Comparativa de las 11 Juntas Directivas'
                       : chartFilter === 'equipos'
-                      ? 'Comparativa de los 40 Equipos Operativos (Barrios)'
+                      ? 'Comparativa de los 11 Equipos Operativos'
                       : chartFilter === 'top_barrios'
                       ? 'Barrios con Mayor Cantidad de Votantes'
                       : 'Barrios Críticos por Reforzar'}
                   </h3>
-                  <span className="text-[11px] text-slate-400">
-                    Cifras consolidadas del censo en tiempo real
+                  <span className="text-[11px] text-slate-500 font-medium">
+                    {chartFilter === 'juntas'
+                      ? '11 Juntas Directivas • Meta: 20 Líderes directivos (500 votantes c/u)'
+                      : chartFilter === 'equipos'
+                      ? '11 Equipos Operativos • Meta: 60 Líderes (20 JD + 40 Operativos) — 1.500 votantes c/u'
+                      : 'Cifras consolidadas del censo territorial en tiempo real'}
                   </span>
                 </div>
 
                 {/* Filtros estilo pestañitas sutiles con scroll horizontal en móvil */}
-                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs overflow-x-auto max-w-full">
+                <div className="inline-flex rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs overflow-x-auto max-w-full select-none">
                   <button
                     onClick={() => setChartFilter('juntas')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'juntas'
-                        ? 'bg-white text-slate-800 shadow-sm'
+                        ? 'bg-white text-slate-800 shadow-sm font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
-                    20 Juntas
+                    11 Juntas
                   </button>
                   <button
                     onClick={() => setChartFilter('equipos')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'equipos'
-                        ? 'bg-white text-slate-800 shadow-sm'
+                        ? 'bg-white text-slate-800 shadow-sm font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
-                    40 Equipos
+                    11 Equipos
                   </button>
                   <button
                     onClick={() => setChartFilter('top_barrios')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'top_barrios'
-                        ? 'bg-white text-slate-800 shadow-sm'
+                        ? 'bg-white text-slate-800 shadow-sm font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
@@ -745,7 +819,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                     onClick={() => setChartFilter('reforzar')}
                     className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition shrink-0 ${
                       chartFilter === 'reforzar'
-                        ? 'bg-white text-slate-800 shadow-sm'
+                        ? 'bg-white text-slate-800 shadow-sm font-black'
                         : 'text-slate-500 hover:text-slate-800'
                     }`}
                   >
@@ -754,12 +828,30 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                 </div>
               </div>
 
+              {/* Mensaje Informativo Estructura Janier Lloreda */}
+              {chartFilter === 'equipos' && (
+                <div className="bg-blue-50/90 border border-blue-200 rounded-xl px-3 py-2 text-xs text-[#001E72] flex items-center gap-2 animate-fade-in">
+                  <span className="text-base">📌</span>
+                  <span className="leading-tight">
+                    <strong>Estructura Oficial Janier Lloreda:</strong> Los 20 líderes de la Junta Directiva se incorporan automáticamente como líderes principales del Equipo Operativo + 40 líderes operativos (Meta: <strong>60 líderes</strong> y <strong>1.500 votantes</strong> por equipo).
+                  </span>
+                </div>
+              )}
+              {chartFilter === 'juntas' && (
+                <div className="bg-emerald-50/90 border border-emerald-200 rounded-xl px-3 py-2 text-xs text-[#166534] flex items-center gap-2 animate-fade-in">
+                  <span className="text-base">🏛️</span>
+                  <span className="leading-tight">
+                    <strong>11 Juntas Directivas Oficiales:</strong> Cada Junta Directiva cuenta con una meta de <strong>20 líderes</strong> y <strong>500 simpatizantes</strong> registrados (25 por líder).
+                  </span>
+                </div>
+              )}
+
               {/* Área del Gráfico con Barras Finas y Escala Estilo Aristotle (Ajuste Perfecto en Desktop y Touch en Móvil) */}
               <div className="pt-2 w-full min-w-0 overflow-hidden">
                 {/* Indicador táctil en celular para que sepan que pueden deslizar suavemente */}
                 <div className="flex sm:hidden items-center justify-between text-[11px] text-slate-500 font-semibold mb-2 px-1 bg-slate-50 border border-slate-200/60 rounded-lg py-1">
                   <span className="flex items-center gap-1.5 text-[#0080FF]">
-                    <span className="text-xs">↔</span> Desliza con el dedo para ver las {chartItems.length} {chartFilter === 'juntas' ? 'Juntas' : 'Equipos'}
+                    <span className="text-xs">↔</span> Desliza con el dedo para ver las {chartItems.length} {chartFilter === 'juntas' ? 'Juntas' : chartFilter === 'equipos' ? 'Equipos' : 'Sectores'}
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">1-{chartItems.length}</span>
                 </div>
@@ -783,18 +875,21 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                       return (
                         <div
                           key={item.id || idx}
-                          className="flex flex-col items-center h-full justify-end group relative flex-1 min-w-[20px] max-w-[32px] mx-auto"
+                          className="flex flex-col items-center h-full justify-end group relative flex-1 min-w-[28px] max-w-[48px] mx-auto"
                         >
                           {/* Número sobre la barra */}
-                          <div className="mb-1 transition">
-                            <span className="text-[10px] sm:text-[11px] font-bold text-slate-700 font-mono">
+                          <div className="mb-1 transition text-center">
+                            <span className="text-[10px] sm:text-[11px] font-black text-slate-800 font-mono block">
                               {item.votos || 0}
+                            </span>
+                            <span className="text-[8px] font-semibold text-slate-400 block -mt-0.5">
+                              votos
                             </span>
                           </div>
 
                           {/* La Barra Pulida y Fina con Paleta Oficial (Verde éxito, Amarillo alerta, Azul Somos) */}
                           <div
-                            className={`w-3.5 sm:w-5 rounded-t-sm transition-all duration-300 shadow-2xs ${
+                            className={`w-4 sm:w-6 rounded-t-md transition-all duration-300 shadow-2xs ${
                               isWarning
                                 ? 'bg-[#F4BD21]'
                                 : isHigh
@@ -807,11 +902,26 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                           {/* Etiqueta del Eje X limpia sin montarse */}
                           <div className="mt-2 text-center w-full px-0.5">
                             <span 
-                              className="text-[9px] sm:text-[10px] font-bold text-slate-600 block truncate"
-                              title={item.nombre}
+                              className="text-[9px] sm:text-[10px] font-black text-slate-700 block truncate"
+                              title={item.nombreCompleto || item.nombre}
                             >
-                              {item.nombre.replace('Junta Directiva ', 'JD ').replace('Equipo Operativo ', 'Eq ')}
+                              {item.nombre}
                             </span>
+                            {/* Progreso de líderes */}
+                            {item.metaLideres && (
+                              <span 
+                                className={`text-[8px] sm:text-[9px] font-bold block mt-0.5 px-1 py-0.5 rounded ${
+                                  item.lideresTotal >= item.metaLideres 
+                                    ? 'text-emerald-700 bg-emerald-50' 
+                                    : 'text-[#001E72] bg-blue-50'
+                                }`}
+                                title={item.tipo === 'equipo' 
+                                  ? `${item.lideresJD} líderes JD (automáticos) + ${item.lideresOp || 0} operativos = ${item.lideresTotal} / 60 meta`
+                                  : `${item.lideresTotal} de 20 líderes directivos`}
+                              >
+                                👥 {item.lideresTotal}/{item.metaLideres}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
@@ -822,7 +932,9 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
 
               {/* Leyenda al pie con Paleta Oficial organizada y responsive */}
               <div className="flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-                <span className="font-semibold text-slate-700">Total sectores: {chartItems.length}</span>
+                <span className="font-semibold text-slate-700">
+                  Total: {chartItems.length} {chartFilter === 'juntas' ? 'Juntas Directivas' : chartFilter === 'equipos' ? 'Equipos Operativos' : 'Sectores'}
+                </span>
                 <div className="flex items-center gap-3">
                   <span className="inline-flex items-center gap-1 font-medium">
                     <span className="w-2.5 h-2.5 rounded-xs bg-[#3FBC24]" /> Destacados
@@ -1712,7 +1824,7 @@ ${typeof window !== 'undefined' ? window.location.origin : 'https://electoralsof
                   {['secretaria', 'lider_junta_directiva', 'lider_equipo_operativo'].includes(newRol) && (
                     <div>
                       <label className="text-xs font-bold text-slate-700 uppercase tracking-wider block mb-1">
-                        {newRol === 'lider_junta_directiva' ? 'Junta Directiva Asignada (1 a 20)' : 'Equipo Operativo Asignado'}
+                        {newRol === 'lider_junta_directiva' ? 'Junta Directiva Asignada (1 a 11)' : 'Equipo Operativo Asignado (1 a 11)'}
                       </label>
                       <select
                         value={newJuntaId}

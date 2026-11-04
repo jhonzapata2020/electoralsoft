@@ -154,7 +154,7 @@ export default function ReportPdfModal({
 
               <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-center">
                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Juntas Activas</span>
-                <span className="text-2xl font-black text-[#0080FF] block mt-0.5">{juntasCubiertas} <span className="text-xs font-normal text-slate-400">/ 20</span></span>
+                <span className="text-2xl font-black text-[#0080FF] block mt-0.5">{juntasCubiertas} <span className="text-xs font-normal text-slate-400">/ 11</span></span>
                 <span className="text-[10px] text-slate-500 font-medium">Juntas Directivas</span>
               </div>
 

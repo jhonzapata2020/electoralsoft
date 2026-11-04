@@ -274,7 +274,7 @@ export default function VoterFilterSidebar({
               className="w-full text-left p-3 rounded-2xl bg-blue-50 hover:bg-blue-100/80 border border-blue-200 text-slate-900 transition flex items-center justify-between"
             >
               <div>
-                <span className="text-xs font-black block text-blue-900">🏙️ Casco Urbano (20 Juntas)</span>
+                <span className="text-xs font-black block text-blue-900">🏙️ Casco Urbano (11 Juntas)</span>
                 <span className="text-[11px] text-blue-700 font-medium">Barrios urbanos de Turbo</span>
               </div>
               <Building className="w-4 h-4 text-blue-600 shrink-0" />
@@ -443,16 +443,16 @@ export default function VoterFilterSidebar({
                 </button>
               </div>
 
-              {/* Si es Urbano o Todas: Selector de Junta Directiva 1 a 20 */}
+              {/* Si es Urbano o Todas: Selector de Junta Directiva 1 a 11 */}
               {filters.zona !== 'rural' && (
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-sky-900 block">Junta Directiva (1 a 20):</span>
+                  <span className="text-[10px] font-bold text-sky-900 block">Junta Directiva (1 a 11):</span>
                   <select
                     value={filters.juntaId}
                     onChange={(e) => update({ juntaId: e.target.value, barrioId: 'todos' })}
                     className="w-full bg-white/95 border border-sky-300 rounded-xl px-2.5 py-1.5 text-xs text-slate-900 font-bold focus:bg-white focus:border-sky-500 focus:outline-none"
                   >
-                    <option value="todas">Todas las Juntas (1 a 20)</option>
+                    <option value="todas">Todas las Juntas (1 a 11)</option>
                     {territory.juntas.map((j) => (
                       <option key={j.id} value={j.id}>
                         {j.nombre}
